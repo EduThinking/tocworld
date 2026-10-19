@@ -3,6 +3,57 @@ import { allRecords, createRecord, updateRecord, deleteRecord, formulaValue } fr
 
 const AVATARS = ['🌱', '🐿️', '🦊', '🐻', '🐰', '🦉'];
 const MAX_BODY = 12_000;
+const MAX_CHAT_BODY = 3_500_000;
+
+const TOCFE_SYSTEM = `너는 TOCfE(Theory of Constraints for Education) 생각도구 전문 튜터 '모찌몽'이야. TOC월드에서 이웃들과 함께 TOCfE를 배우고 실천한다.
+
+TOCfE 주요 생각도구:
+• 목표나무(IO Map/Goal Tree): 원하는 것을 꼭대기에 두고, 그것이 이루어지려면 무엇이 필요한지 아래로 펼쳐가는 도구
+• 갈등구름(Conflict Cloud/EC): 충돌하는 욕구 사이에서 해결책을 찾는 도구. A→B→D, A→C→D' 구조
+• 현실나무(CRT): 현재 불만족스러운 것(UDE)들의 공통 근본원인을 찾는 인과지도
+• 미래나무(FRT): 해결책 실행 후 어떻게 달라지는지 그리는 인과지도
+• 전제조건나무(PRT): 큰 목표로 가는 중간 이정표들을 찾는 도구
+
+응답 규칙: 한국어로 따뜻하게, 200자 이내 핵심만, 스스로 생각할 수 있게 질문으로 이끌어줘.`;
+
+async function bodyOfLarge(req) {
+  const chunks = [];
+  let total = 0;
+  for await (const chunk of req) {
+    total += chunk.length;
+    if (total > MAX_CHAT_BODY) throw Object.assign(new Error('이미지 크기가 너무 커요. 3MB 이하로 올려주세요.'), { status: 413 });
+    chunks.push(chunk);
+  }
+  try { return JSON.parse(Buffer.concat(chunks).toString() || '{}'); }
+  catch { throw Object.assign(new Error('입력 형식을 확인해 주세요.'), { status: 400 }); }
+}
+
+async function chat(req, body) {
+  if (req.headers['x-world-code']) await applicantFor(String(req.headers['x-world-code']).trim());
+  else if (req.headers.authorization) await residentFor(req);
+  else fail('로그인 후 이용해 주세요.', 401);
+  if (!process.env.ANTHROPIC_API_KEY) fail('AI 서비스를 준비 중이에요.', 503);
+  const mode = ['qa', 'tool', 'feedback'].includes(body.mode) ? body.mode : 'qa';
+  const modeHints = { qa: '학생이 TOCfE에 대해 질문하고 있어요.', tool: '학생이 생각도구 작성 도움을 요청하고 있어요. 같이 채워나가줘.', feedback: '학생이 완성한 생각도구 피드백을 원해요. 잘한 점과 개선할 점을 구체적으로 알려줘.' };
+  const messages = (Array.isArray(body.messages) ? body.messages : []).filter(m => m?.role && m?.content).slice(-20);
+  if (!messages.length) fail('메시지가 없어요.', 400);
+  const image = body.image;
+  const last = messages[messages.length - 1];
+  const formatted = [...messages.slice(0, -1)];
+  if (image?.data && last.role === 'user') {
+    formatted.push({ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: image.mediaType || 'image/png', data: image.data } }, { type: 'text', text: last.content || '이 생각도구를 봐줘.' }] });
+  } else {
+    formatted.push(last);
+  }
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 512, system: `${TOCFE_SYSTEM}\n\n현재 모드: ${modeHints[mode]}`, messages: formatted })
+  });
+  if (!response.ok) { console.error('Anthropic error', response.status); fail('AI 답변을 불러오지 못했어요. 잠시 후 다시 시도해주세요.', 503); }
+  const data = await response.json();
+  return { reply: data.content?.[0]?.text || '답변을 불러오지 못했어요.' };
+}
 
 function send(res, status, body) {
   res.statusCode = status;
@@ -201,6 +252,7 @@ export default async function handler(req, res) {
     }
     if (req.method === 'GET' && op === 'home') return send(res, 200, await home(req));
     if (req.method !== 'POST') return send(res, 404, { error: '찾을 수 없습니다.' });
+    if (op === 'chat') return send(res, 200, await chat(req, await bodyOfLarge(req)));
     const body = await bodyOf(req);
     if (op === 'enter') {
       const applicant = await applicantFor(String(body.code || '').trim());

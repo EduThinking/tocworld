@@ -28,6 +28,11 @@ const HOUSE_POSITIONS = {
   'O-H001': [44,22], 'O-H002': [54,22], 'O-H003': [49,42], 'O-H004': [44,58], 'O-H005': [54,58],
   'C-H001': [74,22], 'C-H002': [84,22], 'C-H003': [79,42], 'C-H004': [74,58], 'C-H005': [84,58]
 };
+const VILLAGE_SCENE_POSITIONS = {
+  't': { 'T-H001': [22,28], 'T-H002': [64,22], 'T-H003': [42,47], 'T-H004': [20,70], 'T-H005': [66,68] },
+  'o': { 'O-H001': [35,20], 'O-H002': [70,38], 'O-H003': [50,54], 'O-H004': [22,54], 'O-H005': [60,74] },
+  'c': { 'C-H001': [24,22], 'C-H002': [68,28], 'C-H003': [36,52], 'C-H004': [22,74], 'C-H005': [64,70] }
+};
 
 function renderHouses() {
   const grid = $('#house-grid'); if (grid) grid.replaceChildren();
@@ -250,7 +255,8 @@ function showPage(id) {
     if (button.dataset.page === id) button.setAttribute('aria-current', 'page');
     else button.removeAttribute('aria-current');
   });
-  const titles = { houses: '마을 전체 지도', 'my-home': '내 미니홈피', plaza: '생각 광장', cafe: '마을 카페', library: '마을 도서관', guide: '마을 이용 안내', 'neighbor-home': '이웃 미니홈피' };
+  const titles = { houses: '마을 전체 지도', 'my-home': '내 미니홈피', plaza: '생각 광장', cafe: '마을 카페', library: '마을 도서관', guide: '마을 이용 안내', 'neighbor-home': '이웃 미니홈피', learn: 'TOCfE 배우기' };
+  if (id === 'learn' && !$('#chat-messages').childElementCount) renderBubble('assistant', 'TOCfE 생각도구에 대해 궁금한 것을 물어보세요! 질문하기·작성 도움·피드백 받기 모드를 선택해서 시작해요. 🌱');
   $('#page-label').textContent = titles[id] || 'TOC월드';
   window.scrollTo({ top: 0 });
 }
@@ -305,9 +311,21 @@ function showVillage(key) {
   const vacant = houses.filter(h => !h.resident).length;
   $('#village-detail-name').textContent = labels[key];
   $('#village-detail-count').textContent = `빈집 ${vacant} / ${houses.length}`;
-  $('#village-scene').dataset.village = key;
+  const scene = $('#village-scene');
+  scene.dataset.village = key;
+  scene.querySelectorAll('.scene-house').forEach(el => el.remove());
+  const scenePos = VILLAGE_SCENE_POSITIONS[key] || {};
   const grid = $('#village-detail-grid'); grid.replaceChildren();
   houses.forEach(house => {
+    const pos = scenePos[house.id];
+    if (pos) {
+      const pin = make('button', `scene-house${house.resident ? '' : ' vacant'}`);
+      pin.style.cssText = `left:${pos[0]}%;top:${pos[1]}%`;
+      pin.innerHTML = `${house.resident ? house.resident.avatar : '🏡'} <span>${house.resident ? house.resident.nickname : house.id.slice(-3)}</span>`;
+      pin.title = house.resident ? `${house.resident.nickname} 님의 집` : `${house.id} 빈집`;
+      pin.addEventListener('click', () => visitHouse(house));
+      scene.append(pin);
+    }
     const card = make('article', `house${house.resident ? ' occupied' : ''}`);
     const roof = make('div', 'roof');
     if (house.resident) roof.textContent = house.resident.avatar;
@@ -333,4 +351,63 @@ $('#village-back').addEventListener('click', () => {
 initVillageNav();
 document.querySelectorAll('.community-spot[data-page]').forEach(btn => {
   btn.addEventListener('click', () => showPage(btn.dataset.page));
+});
+
+// === TOCfE 채팅 ===
+let chatMessages = [];
+let chatMode = 'qa';
+
+function renderBubble(role, content) {
+  const container = $('#chat-messages');
+  if (!container) return;
+  const msg = make('div', `chat-bubble ${role}`);
+  if (role === 'assistant') msg.append(make('span', 'chat-avatar', '🍞'));
+  msg.append(make('div', 'chat-text', content));
+  container.append(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+document.querySelectorAll('.chat-mode').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.chat-mode').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    chatMode = btn.dataset.mode;
+  });
+});
+
+$('#chat-form')?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const input = $('#chat-input');
+  const imageInput = $('#chat-image');
+  const text = input.value.trim();
+  if (!text && !imageInput?.files.length) return;
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true;
+  $('#chat-error').textContent = '';
+  renderBubble('user', text || '[이미지 첨부]');
+  input.value = '';
+  chatMessages.push({ role: 'user', content: text || '이미지를 첨부했어요.' });
+  try {
+    let image = null;
+    if (imageInput?.files[0]) {
+      const file = imageInput.files[0];
+      const data = await new Promise((resolve, reject) => {
+        const r = new FileReader(); r.onload = e => resolve(e.target.result.split(',')[1]); r.onerror = reject; r.readAsDataURL(file);
+      });
+      image = { data, mediaType: file.type };
+      imageInput.value = '';
+    }
+    const payload = { messages: chatMessages.slice(-20), mode: chatMode };
+    if (image) payload.image = image;
+    const result = await api('chat', 'POST', payload);
+    renderBubble('assistant', result.reply);
+    chatMessages.push({ role: 'assistant', content: result.reply });
+  } catch (error) {
+    $('#chat-error').textContent = error.message;
+    chatMessages.pop();
+  } finally { button.disabled = false; }
+});
+
+$('#chat-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $('#chat-form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); }
 });
