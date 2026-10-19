@@ -1,3 +1,5 @@
 {
-  "rewrites": [{ "source": "/api", "destination": "/api/index.mjs" }]
+  "rewrites": [{ "source": "/api", "destination": "/api/index.mjs" }],
+  "buildCommand": null,
+  "outputDirectory": "."
 }
