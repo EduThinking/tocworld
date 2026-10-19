@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#edf0e6"><title>TOC월드 · 생각이 자라는 마을</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head><body>
+<section id="gate" class="gate">
+ <div class="gate-card"><p class="eyebrow">WELCOME TO TOC WORLD</p><span class="gate-icon">🌳</span><h1>생각이 머물 집,<br>함께 자라는 마을.</h1><p>나의 작은 문제를 풀고, 생각의 흔적을 쌓아가요.<br>초대받은 이웃의 코드로 문을 열어 주세요.</p>
+ <form id="gate-form"><label for="gate-code">TOC월드 입주 코드</label><input id="gate-code" required autocomplete="off" spellcheck="false" placeholder="입주 코드를 붙여넣으세요"><button class="button primary full" type="submit">TOC월드 입장하기 →</button><p id="gate-error" class="form-error" role="alert"></p></form><small>기존 긴 코드도 사용할 수 있어요. 코드는 본인만 보관해 주세요.</small></div>
+ <div class="gate-landscape"><img src="/world-map.png" alt="TOC월드 세 마을 지도" class="gate-world-img"><span>TOC월드 · 작은 생각이 자라는 곳</span></div>
+</section>
+<div id="world" class="world-shell" hidden>
+ <aside class="sidebar"><a href="#houses" class="brand"><span class="brand-mark">T</span><span>TOC월드<small>생각이 자라는 마을</small></span></a><div class="sidebar-note"><span>🌱</span><b id="welcome-name">새 이웃을 환영해요</b><small>오늘도 나만의 속도로 한 걸음</small></div>
+ <nav aria-label="마을 메뉴"><button data-page="houses" aria-current="page">🗺️ <span>마을 전체 지도</span></button><button data-page="my-home">🏡 <span>내 미니홈피</span></button><button data-page="plaza">🌳 <span>생각 광장</span></button><button data-page="cafe">☕ <span>마을 카페</span></button><button data-page="library">📚 <span>마을 도서관</span></button><button data-page="guide">📖 <span>마을 이용 안내</span></button></nav><div class="sidebar-bottom"><p>작은 문제에서<br>큰 생각이 자랍니다.</p><button id="logout" type="button">마을 나가기 ↗</button></div></aside>
+ <main class="workspace"><header class="workspace-top"><span id="page-label">마을 전체 지도</span><span class="chip">T마을 · 첫 번째 이야기</span></header>
+ <section id="houses" class="page section">
+ <div id="village-map-view">
+  <div class="section-heading"><div><p class="eyebrow">OUR LITTLE WORLD</p><h1>어느 마을에 살고 싶으세요?</h1><p>마을을 눌러 들어가 보세요. 빈집을 고르면 입주할 수 있어요.</p></div><span class="chip" id="vacancy-count">불러오는 중</span></div>
+  <div class="map-wrap"><img src="/world-map.png" alt="TOC월드 세 마을 전체 지도" class="world-map"><div id="map-houses" hidden></div><span class="map-label t">T마을</span><span class="map-label o">O마을</span><span class="map-label c">C마을</span></div>
+  <div class="community-spaces">
+    <div class="community-path-line"></div>
+    <div class="community-row">
+      <button class="community-spot" data-page="plaza"><span class="community-icon">🌳</span><span class="community-name">생각 광장</span><span class="community-desc">생각도구 연습</span></button>
+      <button class="community-spot" data-page="cafe"><span class="community-icon">☕</span><span class="community-name">마을 카페</span><span class="community-desc">생각 쉬어가기</span></button>
+      <button class="community-spot" data-page="library"><span class="community-icon">📚</span><span class="community-name">마을 도서관</span><span class="community-desc">생각도구 자료</span></button>
+    </div>
+  </div>
+ </div>
+ <div id="village-detail" hidden>
+  <div class="village-detail-header"><button class="button secondary" id="village-back">← 전체 지도</button><div><p class="eyebrow" id="village-detail-eyebrow">VILLAGE</p><h2 id="village-detail-name"></h2></div><span class="chip" id="village-detail-count"></span></div>
+  <div class="village-scene" id="village-scene"></div>
+  <div class="house-grid" id="village-detail-grid" aria-live="polite"></div>
+ </div>
+ <p id="world-error" class="form-error" role="alert"></p></section>
+ <section id="my-home" class="page section home-section" hidden><div class="section-heading"><div><p class="eyebrow">MY LITTLE HOME</p><h1>🌿 햇살 머무는 작업실</h1><p>나의 문제, 나의 생각, 나만의 속도로 쌓이는 기록.</p></div><button class="button secondary" data-page="houses">지도 돌아가기</button></div><div id="home-content" aria-live="polite"></div><button id="ask-button" type="button" class="button secondary" hidden>모찌몽에게 질문하기</button><form id="enter-form" class="enter-form" hidden><label for="enter-code">기존 입주증으로 내 집 열기</label><div><input id="enter-code" autocomplete="off"><button class="button secondary" type="submit">내 집 열기</button></div><p id="enter-error" class="form-error" role="alert"></p></form></section>
+ <section id="plaza" class="page section" hidden><div class="section-heading"><div><p class="eyebrow">THINKING PLAZA</p><h1>오늘은 어떤 생각을 해볼까요?</h1><p>문제를 만나고, 생각도구로 한 걸음씩 풀어봐요.</p></div></div><div id="problem-list" class="problem-list" aria-live="polite"></div><p class="notice">현재 문제는 첫 경험을 위한 시범 예시입니다.</p></section>
+ <section id="cafe" class="page section" hidden><div class="section-heading"><div><p class="eyebrow">VILLAGE CAFE</p><h1>☕ 마을 카페</h1><p>생각하다 잠깐 쉬어가는 공간이에요. 천천히 둘러보세요.</p></div></div><div class="guide-grid"><article><b>🌿 생각 산책</b><p>오늘 풀고 싶은 문제를 한 줄로 떠올려 보세요. 다 풀지 않아도 괜찮아요.</p></article><article><b>☁️ 잠깐 멈추기</b><p>빠르게 달릴 때, 잠깐 멈추는 것도 생각의 한 부분이에요.</p></article><article><b>📝 떠오른 것 적기</b><p>광장으로 가서 오늘의 작은 생각을 기록해 보세요.</p></article><article><b>🌸 다음에 또 와요</b><p>언제든 카페에 들러 잠깐 숨 고를 수 있어요.</p></article></div><div style="margin-top:28px"><button class="button primary" data-page="plaza">생각 광장으로 →</button></div></section>
+ <section id="library" class="page section" hidden><div class="section-heading"><div><p class="eyebrow">VILLAGE LIBRARY</p><h1>📚 마을 도서관</h1><p>생각도구를 배우고, 연습하는 자료를 모아둔 곳이에요.</p></div></div><div class="guide-grid"><article><b>🌳 목표나무 (Goal Tree)</b><p>내가 원하는 것을 꼭대기에 두고, 그게 이루어지려면 무엇이 필요한지 위에서 아래로 풀어가는 도구예요.</p></article><article><b>☁️ 구름 (Conflict Cloud)</b><p>서로 충돌하는 욕구 사이에서 해결책을 찾아요. "왜냐하면..."으로 생각을 깊게 팝니다.</p></article><article><b>🌊 인과지도 (CRT / FRT)</b><p>지금 불편함이 왜 생겼는지, 바꾸면 어떻게 달라지는지를 인과 흐름으로 그려봐요.</p></article><article><b>🔄 성장 루프</b><p>행동 → 결과 → 다음 행동으로 이어지는 선순환 고리를 찾아봐요.</p></article></div><div style="margin-top:28px"><button class="button primary" data-page="plaza">생각 광장에서 연습하기 →</button></div></section>
+ <section id="guide" class="page section" hidden><p class="eyebrow">A SMALL GUIDE</p><h1>마을에서 보내는 하루</h1><div class="guide-grid"><article><b>01 · 내 집 고르기</b><p>지도 위 빈집을 누르고 별명과 아바타를 정하면 미니홈피가 열려요.</p></article><article><b>02 · 생각 광장 산책</b><p>작은 문제를 만나 나의 풀이를 적어보세요.</p></article><article><b>03 · 내 기록 돌아보기</b><p>미니홈피에서 풀이·생각나무·피드백을 확인해요. 다른 이웃에게는 비공개예요.</p></article><article><b>04 · 다시 찾아오기</b><p>같은 입주 코드로 다시 들어올 수 있어요. 코드를 안전하게 보관해 주세요.</p></article></div></section>
+ <section id="neighbor-home" class="page section" hidden><p class="eyebrow">NEIGHBOR'S HOME</p><div id="neighbor-content"></div><button class="button secondary" data-page="houses">마을 지도로 돌아가기</button></section>
+ </main></div>
+  <dialog id="apply-dialog" aria-labelledby="apply-title">
+    <form id="apply-form" class="dialog-body">
+      <button type="button" class="close" data-close aria-label="닫기">×</button>
+      <p class="eyebrow">WELCOME HOME</p><h2 id="apply-title">T마을 입주 신청</h2>
+      <p><strong id="chosen-house"></strong>에 입주해요. 마을에서 사용할 별명과 아바타를 골라 주세요. 코드는 입구에서 확인했어요.</p>
+      <input type="hidden" name="houseId" id="house-id">
+      <input type="hidden" id="village-code">
+      <label for="nickname">마을 별명 <span class="required">필수</span></label><input id="nickname" name="nickname" minlength="2" maxlength="20" required placeholder="예: 생각이">
+      <fieldset><legend>내 아바타 <span class="required">필수</span></legend><div class="avatar-choices" id="avatar-choices"></div></fieldset>
+      <label class="check"><input type="checkbox" name="agreed" required><span>별명·아바타·집 ID가 마을에 보이는 데 동의합니다. 제출한 풀이와 피드백은 기본 비공개이며, 입주 코드 또는 입주증을 다른 사람에게 알려주지 마세요.</span></label>
+      <p class="form-error" id="apply-error" role="alert"></p><button type="submit" class="button primary full">신청하고 입주하기</button>
+    </form>
+  </dialog>
+
+  <dialog id="solve-dialog" aria-labelledby="solve-title">
+    <form id="solve-form" class="dialog-body"><button type="button" class="close" data-close aria-label="닫기">×</button><p class="eyebrow">THINK & GROW</p><h2 id="solve-title">문제 풀기</h2><p id="solve-situation"></p><input type="hidden" id="solve-id"><label for="answer">나의 생각도구 풀이</label><textarea id="answer" rows="8" minlength="20" maxlength="4000" required placeholder="무엇을 이루고 싶은지, 무엇이 걸리는지, 어떤 작은 디딤돌을 놓을지 적어보세요."></textarea><p class="hint">20자 이상 적어 주세요. 제출하면 첫 도전을 기념하는 생각나무 1그루가 자랍니다.</p><p class="form-error" id="solve-error" role="alert"></p><button type="submit" class="button primary full">풀이 제출하기</button></form>
+  </dialog>
+  <dialog id="credential-dialog" aria-labelledby="credential-title"><div class="dialog-body"><p class="eyebrow">YOUR HOME KEY</p><h2 id="credential-title">입주를 축하해요! 🌱</h2><p>아래 입주증을 복사해 안전하게 보관해 주세요. 다른 기기에서 내 집을 열 때 필요합니다. 서버에는 원문을 보관하지 않아요.</p><code id="credential-code" class="credential-code"></code><button id="copy-credential" type="button" class="button secondary full">입주증 복사</button><button id="finish-credential" type="button" class="button primary full">보관했어요 · 내 집 보기</button></div></dialog>
+  <dialog id="ask-dialog" aria-labelledby="ask-title"><form id="ask-form" class="dialog-body"><button type="button" class="close" data-close aria-label="닫기">×</button><p class="eyebrow">ASK MOZZIMONG</p><h2 id="ask-title">모찌몽에게 질문하기</h2><p>목표나무를 풀다 막힌 부분을 알려 주세요. 답변은 내 집에만 표시됩니다.</p><label for="question">궁금한 점</label><textarea id="question" rows="6" minlength="10" maxlength="2000" required placeholder="예: 걸림돌을 어떤 말로 써야 할지 모르겠어요."></textarea><p class="form-error" id="ask-error" role="alert"></p><button type="submit" class="button primary full">질문 남기기</button></form></dialog>
+</body>
+</html>
