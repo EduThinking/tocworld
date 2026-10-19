@@ -4,6 +4,7 @@ let state = { houses: [], problems: [] };
 let worldCode = '';
 let ownResident = null;
 const credentialKey = 'toc-world-pilot-credential';
+const worldCodeKey = 'toc-world-code';
 const credential = () => localStorage.getItem(credentialKey);
 const make = (tag, className, value) => {
   const el = document.createElement(tag);
@@ -279,7 +280,7 @@ $('#gate-form').addEventListener('submit', async event => {
   try {
     const code = $('#gate-code').value.trim();
     const result = await api('enter', 'POST', { code });
-    worldCode = code; ownResident = result.resident; localStorage.removeItem(credentialKey);
+    worldCode = code; ownResident = result.resident; localStorage.setItem(worldCodeKey, code); localStorage.removeItem(credentialKey);
     $('#gate-code').value = ''; $('#gate').hidden = true; $('#world').hidden = false;
     $('#welcome-name').textContent = ownResident ? `${ownResident.avatar} ${ownResident.nickname} 님` : '새 이웃을 환영해요';
     showPage('houses'); await load();
@@ -287,7 +288,7 @@ $('#gate-form').addEventListener('submit', async event => {
   finally { button.disabled = false; }
 });
 $('#logout').addEventListener('click', () => {
-  worldCode = ''; ownResident = null; state = {houses:[], problems:[]}; localStorage.removeItem(credentialKey);
+  worldCode = ''; ownResident = null; state = {houses:[], problems:[]}; localStorage.removeItem(credentialKey); localStorage.removeItem(worldCodeKey);
   document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
   $('#home-content').replaceChildren(); $('#neighbor-content').replaceChildren(); $('#house-grid').replaceChildren(); $('#map-houses').replaceChildren(); $('#problem-list').replaceChildren();
   $('#world').hidden = true; $('#gate').hidden = false; $('#gate-code').focus();
@@ -352,6 +353,19 @@ initVillageNav();
 document.querySelectorAll('.community-spot[data-page]').forEach(btn => {
   btn.addEventListener('click', () => showPage(btn.dataset.page));
 });
+
+(async () => {
+  const savedCode = localStorage.getItem(worldCodeKey);
+  if (savedCode) {
+    try {
+      const result = await api('enter', 'POST', { code: savedCode });
+      worldCode = savedCode; ownResident = result.resident; localStorage.removeItem(credentialKey);
+      $('#gate').hidden = true; $('#world').hidden = false;
+      $('#welcome-name').textContent = ownResident ? `${ownResident.avatar} ${ownResident.nickname} 님` : '새 이웃을 환영해요';
+      showPage('houses'); await load();
+    } catch { localStorage.removeItem(worldCodeKey); }
+  }
+})();
 
 // === TOCfE 채팅 ===
 let chatMessages = [];
