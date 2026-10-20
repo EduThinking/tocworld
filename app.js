@@ -276,12 +276,32 @@ $('#ask-form').addEventListener('submit', async event => {
   } catch (error) { $('#ask-error').textContent = error.message; }
   finally { button.disabled = false; }
 });
+let solveImageData = null;
+$('#solve-image').addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) { $('#solve-error').textContent = '이미지가 너무 커요. 3MB 이하로 올려주세요.'; event.target.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    solveImageData = { data: e.target.result.split(',')[1], mediaType: file.type || 'image/png' };
+    $('#solve-preview-img').src = e.target.result;
+    $('#solve-image-preview').hidden = false;
+  };
+  reader.readAsDataURL(file);
+});
+$('#solve-image-remove').addEventListener('click', () => {
+  solveImageData = null;
+  $('#solve-image').value = '';
+  $('#solve-image-preview').hidden = true;
+});
 $('#solve-form').addEventListener('submit', async event => {
   event.preventDefault();
   const button = event.currentTarget.querySelector('[type=submit]'); button.disabled = true; $('#solve-error').textContent = '';
   try {
-    await api('submit', 'POST', { problemId: $('#solve-id').value, answer: $('#answer').value }, true);
-    $('#solve-dialog').close(); $('#answer').value = ''; await load(); showPage('my-home');
+    const payload = { problemId: $('#solve-id').value, answer: $('#answer').value };
+    if (solveImageData) payload.image = solveImageData;
+    await api('submit', 'POST', payload, true);
+    $('#solve-dialog').close(); $('#answer').value = ''; solveImageData = null; $('#solve-image').value = ''; $('#solve-image-preview').hidden = true; await load(); showPage('my-home');
   } catch (error) { $('#solve-error').textContent = error.message; }
   finally { button.disabled = false; }
 });
