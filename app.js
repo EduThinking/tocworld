@@ -1,6 +1,6 @@
 const $ = selector => document.querySelector(selector);
 const avatars = ['🌱', '🐿️', '🦊', '🐻', '🐰', '🦉'];
-let state = { houses: [], problems: [] };
+let state = { houses: [], problems: [], books: [] };
 let worldPhone = '';
 let ownResident = null;
 const credentialKey = 'toc-world-pilot-credential';
@@ -30,10 +30,22 @@ const HOUSE_POSITIONS = {
   'C-H001': [74,22], 'C-H002': [84,22], 'C-H003': [79,42], 'C-H004': [74,58], 'C-H005': [84,58]
 };
 const VILLAGE_SCENE_POSITIONS = {
-  't': { 'T-H001': [22,28], 'T-H002': [64,22], 'T-H003': [42,47], 'T-H004': [20,70], 'T-H005': [66,68] },
-  'o': { 'O-H001': [35,20], 'O-H002': [70,38], 'O-H003': [50,54], 'O-H004': [22,54], 'O-H005': [60,74] },
-  'c': { 'C-H001': [24,22], 'C-H002': [68,28], 'C-H003': [36,52], 'C-H004': [22,74], 'C-H005': [64,70] }
+  't': { 'T-H001': [18,24], 'T-H002': [48,17], 'T-H003': [76,22], 'T-H004': [27,56], 'T-H005': [60,57] },
+  'o': { 'O-H001': [44,12], 'O-H002': [78,33], 'O-H003': [17,32], 'O-H004': [18,62], 'O-H005': [73,68] },
+  'c': { 'C-H001': [22,21], 'C-H002': [57,15], 'C-H003': [18,49], 'C-H004': [42,73], 'C-H005': [69,73] }
 };
+
+// 씬 좌표가 없는 집(H006+)은 씬 하단에 자동 배치
+function sceneAutoPos(existingPositions, index) {
+  const used = Object.values(existingPositions);
+  const cols = 4;
+  const col = index % cols;
+  const row = Math.floor(index / cols);
+  // 기존 좌표와 겹치지 않도록 하단 영역에 배치
+  let x = 15 + col * 22;
+  let y = 82 + row * 10;
+  return [x, Math.min(y, 92)];
+}
 
 function renderHouses() {
   const grid = $('#house-grid'); if (grid) grid.replaceChildren();
@@ -92,6 +104,31 @@ function renderProblems() {
       $('#solve-dialog').showModal();
     });
     card.append(info, button); list.append(card);
+  });
+}
+
+function renderBooks() {
+  const shelf = $('#book-shelf'); if (!shelf) return;
+  shelf.replaceChildren();
+  if (!state.books.length) { shelf.append(make('p', 'notice', '곧 책이 도착해요!')); return; }
+  state.books.forEach(book => {
+    const card = make('button', 'book-card');
+    card.append(make('span', 'book-icon', book.icon), make('span', 'book-title', book.title), make('span', 'book-tag', book.tag));
+    card.addEventListener('click', () => {
+      $('#book-tag').textContent = book.tag;
+      $('#book-title').textContent = `${book.icon} ${book.title}`;
+      const contentEl = $('#book-content');
+      contentEl.innerHTML = book.content
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .split('\n').map(line => {
+          if (/^\d+\.\s/.test(line)) return `<li>${line.replace(/^\d+\.\s/, '')}</li>`;
+          if (line.startsWith('- ')) return `<li>${line.slice(2)}</li>`;
+          if (!line.trim()) return '<br>';
+          return `<p>${line}</p>`;
+        }).join('').replace(/(<li>.*<\/li>)+/gs, m => `<ol>${m}</ol>`);
+      $('#book-dialog').showModal();
+    });
+    shelf.append(card);
   });
 }
 
@@ -166,7 +203,7 @@ function renderHome(home) {
 
 async function load() {
   try {
-    state = await api('state'); renderHouses(); renderProblems();
+    state = await api('state'); renderHouses(); renderProblems(); renderBooks();
     if (ownResident || credential()) {
       try { renderHome(await api('home', 'GET', null, true)); }
       catch (error) {
@@ -206,17 +243,16 @@ $('#apply-form').addEventListener('submit', async event => {
     });
     localStorage.setItem(credentialKey, result.credential); ownResident = result.resident; $('#welcome-name').textContent = `${ownResident.avatar} ${ownResident.nickname} 님`;
     $('#apply-dialog').close(); await load(); showPage('my-home');
-    $('#credential-code').textContent = result.credential;
     $('#credential-dialog').showModal();
   } catch (error) { $('#apply-error').textContent = error.message; }
   finally { button.disabled = false; }
 });
-$('#copy-credential').addEventListener('click', async () => {
-  await navigator.clipboard.writeText($('#credential-code').textContent);
-  $('#copy-credential').textContent = '복사했어요 ✓';
-});
+$('#close-book').addEventListener('click', () => { $('#book-dialog').close(); });
 $('#finish-credential').addEventListener('click', () => {
   $('#credential-dialog').close(); showPage('my-home');
+});
+$('#go-plaza').addEventListener('click', () => {
+  $('#credential-dialog').close(); showPage('plaza');
 });
 $('#enter-form').addEventListener('submit', async event => {
   event.preventDefault(); $('#enter-error').textContent = '';
@@ -317,9 +353,12 @@ function showVillage(key) {
   scene.querySelectorAll('.scene-house').forEach(el => el.remove());
   const scenePos = VILLAGE_SCENE_POSITIONS[key] || {};
   const grid = $('#village-detail-grid'); grid.replaceChildren();
+  let autoIdx = 0;
   houses.forEach(house => {
-    const pos = scenePos[house.id];
-    if (pos) {
+    const defined = scenePos[house.id];
+    const pos = defined ?? sceneAutoPos(scenePos, autoIdx);
+    if (!defined) autoIdx++;
+    {
       const pin = make('button', `scene-house${house.resident ? '' : ' vacant'}`);
       pin.style.cssText = `left:${pos[0]}%;top:${pos[1]}%`;
       pin.innerHTML = `${house.resident ? house.resident.avatar : '🏡'} <span>${house.resident ? house.resident.nickname : house.id.slice(-3)}</span>`;

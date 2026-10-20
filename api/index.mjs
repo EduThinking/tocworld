@@ -122,16 +122,28 @@ function publicResident(record) {
   return { nickname: record.fields['별명'], avatar: record.fields['아바타'], houseId: record.fields['집 ID'] };
 }
 
+const FALLBACK_BOOKS = [
+  { id: 'B-CLOUD', title: '구름 작성법', icon: '☁️', tag: '갈등 해결', content: '서로 원하는 게 달라 부딪힐 때, 둘 다 진짜로 원하는 공통 목표를 찾아 해결책을 만드는 도구예요.\n\n**어떻게 쓰나요?**\n\n1. **A (공통 목표)** — 우리가 함께 원하는 건 무엇인가요?\n2. **B (욕구)** — A를 이루려면 꼭 있어야 할 것 (한쪽 입장)\n3. **C (욕구)** — A를 이루려면 꼭 있어야 할 것 (다른 입장)\n4. **D (원함)** — B를 위해 구체적으로 원하는 것\n5. **D\' (원함)** — C를 위해 구체적으로 원하는 것\n6. D와 D\'가 왜 충돌하는지 살펴봐요\n7. 숨겨진 가정을 찾아, 그걸 깨는 해결책을 만들어요' },
+  { id: 'B-BRANCH', title: '가지 작성법', icon: '🌿', tag: '인과 분석', content: '"이것이 있으면 → 저것이 생긴다"는 인과 관계를 화살표로 연결해, 문제의 흐름과 원인을 파악하는 도구예요.\n\n**어떻게 쓰나요?**\n\n1. 시작 원인(A)을 적어요\n2. "A가 있으면 → B가 된다" 화살표로 연결해요\n3. B도 원인이 되어 → C로 이어지는 식으로 계속 연결해요\n4. 각 화살표마다 "왜?"를 물어 논리가 맞는지 확인해요\n5. 나무처럼 퍼지는 전체 흐름을 보면서 핵심 원인을 찾아요' },
+  { id: 'B-GOAL', title: '목표나무 작성법', icon: '🌳', tag: '목표 설계', content: '크고 담대한 목표를 꼭대기에 두고, 그것을 이루기 위해 반드시 갖춰야 할 조건들을 단계적으로 펼쳐나가는 도구예요.\n\n**어떻게 쓰나요?**\n\n1. **야심찬 목표(T)** — 이루고 싶은 가장 크고 담대한 것을 꼭대기에 적어요\n2. **필요 조건(NC)** — 목표가 이루어지려면 반드시 있어야 하는 조건들을 찾아요\n3. 각 조건을 이루려면 다시 무엇이 필요한지 아래로 펼쳐요\n4. 나무 전체가 완성되면 어디서부터 시작할지 순서가 자연스럽게 보여요' },
+];
+
 async function publicState() {
-  const [houses, residents, problems] = await Promise.all([
-    allRecords('집'), allRecords('이웃'), allRecords('문제')
+  const [houses, residents, problems, booksRaw] = await Promise.all([
+    allRecords('집'), allRecords('이웃'), allRecords('문제'),
+    allRecords('책').catch(() => [])
   ]);
   const byHouse = new Map(residents.map(r => [r.fields['집 ID'], publicResident(r)]));
+  const books = booksRaw.filter(r => r.fields['공개']).map(r => ({
+    id: r.fields['책 ID'], title: r.fields['제목'], icon: r.fields['아이콘'] || '📖',
+    tag: r.fields['태그'] || '', content: r.fields['내용'] || ''
+  }));
   return {
     houses: houses.map(r => ({ id: r.fields['집 ID'], resident: byHouse.get(r.fields['집 ID']) || null })).sort((a,b) => a.id.localeCompare(b.id)),
     problems: problems.filter(r => r.fields['공개']).map(r => ({
       id: r.fields['문제 ID'], title: r.fields['제목'], situation: r.fields['상황'], place: r.fields['장소'], tool: r.fields['생각도구']
-    }))
+    })),
+    books: books.length ? books : FALLBACK_BOOKS,
   };
 }
 
@@ -247,6 +259,19 @@ async function reply(req, body) {
   return { ok: true };
 }
 
+async function pending(req) {
+  requireAdmin(req);
+  const all = await allRecords('질문', `{모찌몽 답변}=BLANK()`);
+  return {
+    questions: all.map(r => ({
+      id: r.fields['질문 ID'],
+      question: r.fields['질문 내용'],
+      askedAt: r.fields['질문 시각'],
+      residentId: r.fields['이웃 ID'],
+    }))
+  };
+}
+
 export default async function handler(req, res) {
   try {
     const op = new URL(req.url, 'http://localhost').searchParams.get('op');
@@ -269,6 +294,7 @@ export default async function handler(req, res) {
     if (op === 'ask') return send(res, 201, await ask(req, body));
     if (op === 'feedback') return send(res, 200, await feedback(req, body));
     if (op === 'reply') return send(res, 200, await reply(req, body));
+    if (op === 'pending') return send(res, 200, await pending(req));
     return send(res, 404, { error: '찾을 수 없습니다.' });
   } catch (error) {
     if (!error.status) console.error(error);
