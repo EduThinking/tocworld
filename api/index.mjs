@@ -29,7 +29,7 @@ async function bodyOfLarge(req) {
 }
 
 async function chat(req, body) {
-  if (req.headers['x-world-code']) await applicantFor(String(req.headers['x-world-code']).trim());
+  if (req.headers['x-world-phone']) await applicantByPhone(String(req.headers['x-world-phone']).trim());
   else if (req.headers.authorization) await residentFor(req);
   else fail('로그인 후 이용해 주세요.', 401);
   if (!process.env.ANTHROPIC_API_KEY) fail('AI 서비스를 준비 중이에요.', 503);
@@ -80,26 +80,31 @@ function equalHash(a, b) {
 }
 function recordId(prefix) { return `${prefix}-${randomBytes(5).toString('hex').toUpperCase()}`; }
 
-async function applicantFor(code) {
-  if (/^toc-/i.test(code)) code = code.toUpperCase();
-  if (!/^(?:[A-Za-z0-9_-]{43}|TOC-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4})$/.test(code)) fail('챌린지 신청 후 받은 입주 코드를 확인해 주세요.', 403);
+function normalizePhone(input) {
+  return String(input).replace(/[^0-9]/g, '');
+}
+
+async function applicantByPhone(phone) {
+  const normalized = normalizePhone(phone);
+  if (!/^01[016789][0-9]{7,8}$/.test(normalized)) fail('올바른 전화번호를 입력해 주세요. (예: 010-1234-5678)', 400);
   const base = process.env.CHALLENGE_AIRTABLE_BASE_ID;
   if (!base || !process.env.AIRTABLE_API_KEY) fail('신청 확인을 준비 중이에요.', 503);
   const url = new URL(`https://api.airtable.com/v0/${base}/tblj8LIM2SaJFJGaA`);
-  const codeField = code.startsWith('TOC-') ? 'TOC월드 간편 코드 해시' : 'TOC월드 입주 코드 해시';
-  url.searchParams.set('filterByFormula', `{${codeField}}=${formulaValue(hash(code))}`);
+  url.searchParams.set('filterByFormula',
+    `SUBSTITUTE(SUBSTITUTE({연락처},"-","")," ","")=${formulaValue(normalized)}`
+  );
   const response = await fetch(url, { headers: { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` } });
   if (!response.ok) throw new Error(`신청 확인 실패: ${response.status}`);
   const data = await response.json();
-  const applicant = data.records?.[0];
-  if (!applicant || !equalHash(applicant.fields[codeField], hash(code)) || applicant.fields['진행 상태'] === '취소')
-    fail('유효한 챌린지 신청의 입주 코드가 아니에요.', 403);
-  return applicant;
+  const active = (data.records || []).filter(r => r.fields['진행 상태'] !== '취소');
+  if (!active.length) fail('챌린지에 신청한 전화번호가 아니에요.', 403);
+  active.sort((a, b) => b.createdTime.localeCompare(a.createdTime));
+  return active[0];
 }
 
 async function residentFor(req) {
-  if (req.headers['x-world-code']) {
-    const applicant = await applicantFor(String(req.headers['x-world-code']).trim());
+  if (req.headers['x-world-phone']) {
+    const applicant = await applicantByPhone(String(req.headers['x-world-phone']).trim());
     const matches = await allRecords('이웃', `{신청 레코드 ID}=${formulaValue(applicant.id)}`);
     if (matches.length !== 1) fail('먼저 빈집을 선택해 입주해 주세요.', 403);
     return matches[0];
@@ -131,7 +136,7 @@ async function publicState() {
 }
 
 async function apply(body) {
-  const applicant = await applicantFor(String(body.villageCode || '').trim());
+  const applicant = await applicantByPhone(String(body.phone || '').trim());
   const nickname = String(body.nickname || '').trim();
   const houseId = String(body.houseId || '').trim();
   const avatar = String(body.avatar || '').trim();
@@ -246,7 +251,7 @@ export default async function handler(req, res) {
   try {
     const op = new URL(req.url, 'http://localhost').searchParams.get('op');
     if (req.method === 'GET' && op === 'state') {
-      if (req.headers['x-world-code']) await applicantFor(String(req.headers['x-world-code']).trim());
+      if (req.headers['x-world-phone']) await applicantByPhone(String(req.headers['x-world-phone']).trim());
       else await residentFor(req);
       return send(res, 200, await publicState());
     }
@@ -255,7 +260,7 @@ export default async function handler(req, res) {
     if (op === 'chat') return send(res, 200, await chat(req, await bodyOfLarge(req)));
     const body = await bodyOf(req);
     if (op === 'enter') {
-      const applicant = await applicantFor(String(body.code || '').trim());
+      const applicant = await applicantByPhone(String(body.phone || '').trim());
       const residents = await allRecords('이웃', `{신청 레코드 ID}=${formulaValue(applicant.id)}`);
       return send(res, 200, { ok: true, resident: residents[0] ? publicResident(residents[0]) : null });
     }

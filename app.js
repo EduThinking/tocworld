@@ -1,10 +1,10 @@
 const $ = selector => document.querySelector(selector);
 const avatars = ['🌱', '🐿️', '🦊', '🐻', '🐰', '🦉'];
 let state = { houses: [], problems: [] };
-let worldCode = '';
+let worldPhone = '';
 let ownResident = null;
 const credentialKey = 'toc-world-pilot-credential';
-const worldCodeKey = 'toc-world-code';
+const worldPhoneKey = 'toc-world-phone';
 const credential = () => localStorage.getItem(credentialKey);
 const make = (tag, className, value) => {
   const el = document.createElement(tag);
@@ -16,7 +16,7 @@ const make = (tag, className, value) => {
 async function api(op, method = 'GET', data, useCredential = false) {
   const response = await fetch(`/api?op=${op}`, {
     method,
-    headers: { ...(worldCode ? { 'X-World-Code': worldCode } : {}), ...(data ? { 'Content-Type': 'application/json' } : {}), ...(useCredential ? { Authorization: `Bearer ${credential()}` } : {}) },
+    headers: { ...(worldPhone ? { 'X-World-Phone': worldPhone } : {}), ...(data ? { 'Content-Type': 'application/json' } : {}), ...(useCredential ? { Authorization: `Bearer ${credential()}` } : {}) },
     body: data ? JSON.stringify(data) : undefined
   });
   const result = await response.json();
@@ -181,7 +181,7 @@ async function load() {
 }
 
 function openApply(id) {
-  $('#apply-form').reset(); $('#house-id').value = id; $('#village-code').value = worldCode;
+  $('#apply-form').reset(); $('#house-id').value = id; $('#village-phone').value = worldPhone;
   $('#chosen-house').textContent = id; $('#apply-error').textContent = '';
   const villageLabel = id.startsWith('O') ? 'O마을' : id.startsWith('C') ? 'C마을' : 'T마을';
   $('#apply-title').textContent = `${villageLabel} 입주 신청`;
@@ -202,7 +202,7 @@ $('#apply-form').addEventListener('submit', async event => {
     const result = await api('apply', 'POST', {
       houseId: $('#house-id').value, nickname: $('#nickname').value,
       avatar: form.querySelector('[name=avatar]:checked').value, agreed: form.querySelector('[name=agreed]').checked,
-      villageCode: $('#village-code').value.trim()
+      phone: $('#village-phone').value.trim()
     });
     localStorage.setItem(credentialKey, result.credential); ownResident = result.resident; $('#welcome-name').textContent = `${ownResident.avatar} ${ownResident.nickname} 님`;
     $('#apply-dialog').close(); await load(); showPage('my-home');
@@ -278,9 +278,9 @@ function visitHouse(house) {
 $('#gate-form').addEventListener('submit', async event => {
   event.preventDefault(); const button = event.currentTarget.querySelector('button'); button.disabled = true; $('#gate-error').textContent = '';
   try {
-    const code = $('#gate-code').value.trim();
-    const result = await api('enter', 'POST', { code });
-    worldCode = code; ownResident = result.resident; localStorage.setItem(worldCodeKey, code); localStorage.removeItem(credentialKey);
+    const phone = $('#gate-code').value.trim();
+    const result = await api('enter', 'POST', { phone });
+    worldPhone = phone; ownResident = result.resident; localStorage.setItem(worldPhoneKey, phone); localStorage.removeItem(credentialKey);
     $('#gate-code').value = ''; $('#gate').hidden = true; $('#world').hidden = false;
     $('#welcome-name').textContent = ownResident ? `${ownResident.avatar} ${ownResident.nickname} 님` : '새 이웃을 환영해요';
     showPage('houses'); await load();
@@ -288,7 +288,7 @@ $('#gate-form').addEventListener('submit', async event => {
   finally { button.disabled = false; }
 });
 $('#logout').addEventListener('click', () => {
-  worldCode = ''; ownResident = null; state = {houses:[], problems:[]}; localStorage.removeItem(credentialKey); localStorage.removeItem(worldCodeKey);
+  worldPhone = ''; ownResident = null; state = {houses:[], problems:[]}; localStorage.removeItem(credentialKey); localStorage.removeItem(worldPhoneKey);
   document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
   $('#home-content').replaceChildren(); $('#neighbor-content').replaceChildren(); $('#house-grid').replaceChildren(); $('#map-houses').replaceChildren(); $('#problem-list').replaceChildren();
   $('#world').hidden = true; $('#gate').hidden = false; $('#gate-code').focus();
@@ -355,15 +355,15 @@ document.querySelectorAll('.community-spot[data-page]').forEach(btn => {
 });
 
 (async () => {
-  const savedCode = localStorage.getItem(worldCodeKey);
-  if (savedCode) {
+  const savedPhone = localStorage.getItem(worldPhoneKey);
+  if (savedPhone) {
     try {
-      const result = await api('enter', 'POST', { code: savedCode });
-      worldCode = savedCode; ownResident = result.resident; localStorage.removeItem(credentialKey);
+      const result = await api('enter', 'POST', { phone: savedPhone });
+      worldPhone = savedPhone; ownResident = result.resident; localStorage.removeItem(credentialKey);
       $('#gate').hidden = true; $('#world').hidden = false;
       $('#welcome-name').textContent = ownResident ? `${ownResident.avatar} ${ownResident.nickname} 님` : '새 이웃을 환영해요';
       showPage('houses'); await load();
-    } catch { localStorage.removeItem(worldCodeKey); }
+    } catch { localStorage.removeItem(worldPhoneKey); }
   }
 })();
 
