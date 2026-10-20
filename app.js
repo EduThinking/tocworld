@@ -94,7 +94,7 @@ function renderProblems() {
     info.append(make('span', 'tag', `${problem.place} · ${problem.tool}`));
     info.append(make('h3', '', problem.title));
     info.append(make('p', '', problem.situation));
-    const button = make('button', 'button primary', '문제 풀어보기 ↗');
+    const button = make('button', 'button primary', '생각도구 작성하기 ↗');
     button.addEventListener('click', () => {
       if (!ownResident && !credential()) { showPage('houses'); alert('먼저 빈집을 골라 입주해 주세요.'); return; }
       $('#solve-title').textContent = problem.title;
