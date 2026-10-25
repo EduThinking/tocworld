@@ -348,6 +348,7 @@ $('#solve-image').addEventListener('change', event => {
     solveImageData = { data: e.target.result.split(',')[1], mediaType: file.type || 'image/png' };
     $('#solve-preview-img').src = e.target.result;
     $('#solve-image-preview').hidden = false;
+    $('#gallery-share-label').hidden = false;
   };
   reader.readAsDataURL(file);
 });
@@ -355,6 +356,8 @@ $('#solve-image-remove').addEventListener('click', () => {
   solveImageData = null;
   $('#solve-image').value = '';
   $('#solve-image-preview').hidden = true;
+  $('#gallery-share-label').hidden = true;
+  $('#share-to-gallery').checked = false;
 });
 $('#solve-form').addEventListener('submit', async event => {
   event.preventDefault();
@@ -363,7 +366,21 @@ $('#solve-form').addEventListener('submit', async event => {
     const payload = { problemId: $('#solve-id').value, answer: $('#answer').value };
     if (solveImageData) payload.image = solveImageData;
     await api('submit', 'POST', payload, true);
-    $('#solve-dialog').close(); $('#answer').value = ''; solveImageData = null; $('#solve-image').value = ''; $('#solve-image-preview').hidden = true; await load(); showPage('my-home');
+    if (solveImageData && $('#share-to-gallery').checked) {
+      const problem = state.problems.find(p => p.id === $('#solve-id').value);
+      const tool = problem?.tool || '기타';
+      try {
+        const result = await api('gallery-upload', 'POST', {
+          title: problem?.title || '생각광장 문제 풀이',
+          desc: '',
+          tool,
+          imageData: solveImageData.data,
+          imageMediaType: solveImageData.mediaType
+        }, true);
+        if (result.feedback) alert(`🍞 모찌몽의 한마디: ${result.feedback}`);
+      } catch (e) { console.error('Gallery upload failed:', e); }
+    }
+    $('#solve-dialog').close(); $('#answer').value = ''; solveImageData = null; $('#solve-image').value = ''; $('#solve-image-preview').hidden = true; $('#gallery-share-label').hidden = true; $('#share-to-gallery').checked = false; await load(); showPage('my-home');
   } catch (error) { $('#solve-error').textContent = error.message; }
   finally { button.disabled = false; }
 });
@@ -831,6 +848,12 @@ async function openGalleryDetail(artworkId) {
     if (artwork.createdAt) meta.append(make('small', '', new Date(artwork.createdAt).toLocaleDateString('ko-KR')));
     content.append(meta);
     if (artwork.desc) content.append(make('p', 'gallery-desc', artwork.desc));
+    if (artwork.feedback) {
+      const feedbackBox = make('div', 'gallery-feedback');
+      feedbackBox.append(make('span', 'feedback-label', '🍞 모찌몽의 한마디'));
+      feedbackBox.append(make('p', '', artwork.feedback));
+      content.append(feedbackBox);
+    }
     $('#gallery-comment-artwork-id').value = artwork.recordId;
     const commentsContainer = $('#gallery-comments');
     commentsContainer.replaceChildren();
@@ -891,7 +914,7 @@ $('#gallery-upload-form')?.addEventListener('submit', async e => {
   const button = e.currentTarget.querySelector('[type=submit]'); button.disabled = true;
   $('#gallery-upload-error').textContent = '';
   try {
-    await api('gallery-upload', 'POST', {
+    const result = await api('gallery-upload', 'POST', {
       title: $('#gallery-title').value.trim(),
       tool: $('#gallery-tool').value,
       desc: $('#gallery-desc').value.trim(),
@@ -901,6 +924,9 @@ $('#gallery-upload-form')?.addEventListener('submit', async e => {
     galleryImageData = null;
     $('#gallery-upload-dialog').close();
     await loadGallery();
+    if (result.feedback) {
+      setTimeout(() => alert(`🍞 모찌몽의 한마디: ${result.feedback}`), 300);
+    }
   } catch (error) { $('#gallery-upload-error').textContent = error.message; }
   finally { button.disabled = false; }
 });

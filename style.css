@@ -162,4 +162,7 @@
 .gallery-comment-form textarea{flex:1;border:1px solid #d8e6d0;border-radius:10px;padding:10px 14px;font-size:14px;resize:none}
 .gallery-comment-form textarea:focus{outline:none;border-color:#7ea87a;box-shadow:0 0 0 3px #7ea87a22}
 .gallery-comment-form .button{white-space:nowrap}
+.gallery-feedback{background:linear-gradient(135deg,#fef8e8 0%,#fff5e6 100%);border-radius:14px;padding:14px 16px;margin:16px 0;border:1px solid #f0e4c8}
+.feedback-label{display:block;font-size:13px;font-weight:600;color:#d4a44a;margin-bottom:8px}
+.gallery-feedback p{margin:0;font-size:14px;color:#6b5a3e;line-height:1.7}
 @media(max-width:640px){.gallery-grid{grid-template-columns:1fr 1fr;gap:10px}.gallery-thumbnail{aspect-ratio:1}.gallery-tool-tag{margin:8px 10px 6px;font-size:10px}.gallery-title{font-size:13px;margin:0 10px 6px}.gallery-card-footer{padding:0 10px 10px;font-size:10px}.gallery-comment-form{flex-direction:column}.gallery-comment-form .button{width:100%}}

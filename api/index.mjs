@@ -523,6 +523,44 @@ async function cafeWrite(req, body) {
 
 const GALLERY_TOOLS = ['구름', '가지', '목표나무', '기타'];
 
+const GALLERY_FEEDBACK_SYSTEM = `너는 TOCfE(Theory of Constraints for Education) 생각도구 전문 튜터 '모찌몽'이야.
+
+이웃이 업로드한 생각도구 이미지를 보고 따뜻한 피드백을 해줘. 100~150자 정도로 짧고 친근하게!
+
+**피드백 원칙:**
+1. 먼저 잘한 점 1가지를 구체적으로 칭찬해
+2. 더 좋아질 수 있는 팁 1가지를 부드럽게 제안해
+3. 격려의 마무리 한마디
+
+**생각도구별 포인트:**
+- 구름: 갈등 상황이 명확한지, A-B-C-D-D' 연결이 논리적인지
+- 가지: 원인→결과 흐름이 자연스러운지, "만약~그러면" 구조가 맞는지
+- 목표나무: 목표가 구체적인지, 걸림돌과 디딤돌 연결이 현실적인지
+
+이미지가 불명확하거나 생각도구가 아니어도 친절하게 응원해줘.`;
+
+async function generateGalleryFeedback(imageData, mediaType, tool) {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 256,
+        system: GALLERY_FEEDBACK_SYSTEM,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageData } },
+          { type: 'text', text: `이 ${tool} 생각도구를 봐줘!` }
+        ]}]
+      })
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.content?.[0]?.text || null;
+  } catch { return null; }
+}
+
 async function galleryList() {
   const artworks = await allRecords('갤러리', `{공개}=TRUE()`);
   const residents = await allRecords('이웃');
@@ -563,6 +601,7 @@ async function galleryUpload(req, body) {
   if (imageData.length > 3_000_000) fail('이미지가 너무 커요. 3MB 이하로 올려주세요.');
 
   const dataUrl = `data:${imageMediaType};base64,${imageData}`;
+  const feedback = await generateGalleryFeedback(imageData, imageMediaType, tool);
   const created = await createRecord('갤러리', {
     '작성자 ID': [resident.id],
     '제목': title,
@@ -570,9 +609,10 @@ async function galleryUpload(req, body) {
     '생각도구': tool,
     '이미지': [{ url: dataUrl }],
     '공개': true,
-    '작성 시각': new Date().toISOString()
+    '작성 시각': new Date().toISOString(),
+    '모찌몽 피드백': feedback || ''
   });
-  return { ok: true, id: created.fields['작품 ID'] };
+  return { ok: true, id: created.fields['작품 ID'], feedback };
 }
 
 async function galleryDetail(req, body) {
@@ -597,7 +637,8 @@ async function galleryDetail(req, body) {
       authorId: authorRecord?.fields['이웃 ID'],
       author: authorRecord?.fields['별명'] || '익명',
       avatar: authorRecord?.fields['아바타'] || '🌱',
-      createdAt: artwork.fields['작성 시각']
+      createdAt: artwork.fields['작성 시각'],
+      feedback: artwork.fields['모찌몽 피드백'] || null
     },
     comments: comments.map(c => {
       const commenter = c.fields['작성자 ID']?.[0] ? residentMap[c.fields['작성자 ID'][0]] : null;
