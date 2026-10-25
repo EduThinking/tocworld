@@ -376,6 +376,7 @@ function showPage(id) {
   });
   const titles = { houses: '마을 전체 지도', 'my-home': '내 미니홈피', plaza: '생각 광장', cafe: '마을 카페', library: '마을 도서관', guide: '마을 이용 안내', 'neighbor-home': '이웃 미니홈피', learn: 'TOCfE 배우기' };
   if (id === 'learn' && !$('#chat-messages').childElementCount) renderBubble('assistant', 'TOCfE 생각도구에 대해 궁금한 것을 물어보세요! 질문하기·작성 도움·피드백 받기 모드를 선택해서 시작해요. 🌱');
+  $('#page-label').textContent = titles[id] || 'TOC월드';
   window.scrollTo({ top: 0 });
 }
 document.querySelectorAll('[data-page]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.page)));
