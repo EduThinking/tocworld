@@ -326,38 +326,15 @@ async function home(req) {
   };
 }
 
-async function generateAnswer(question, nickname) {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 600,
-        system: `${TOCFE_SYSTEM}\n\n지금 ${nickname} 님이 질문을 남겼어요. 따뜻하고 친근하게 답변해주세요. 질문에 맞는 생각도구가 있다면 그 도구를 활용하도록 안내해주세요.`,
-        messages: [{ role: 'user', content: question }]
-      })
-    });
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.content?.[0]?.text || null;
-  } catch { return null; }
-}
-
 async function ask(req, body) {
   const resident = await residentFor(req);
   const question = String(body.question || '').trim();
   if (question.length < 10 || question.length > 2000) fail('질문은 10~2000자로 적어 주세요.');
-
-  const answer = await generateAnswer(question, resident.fields['별명']);
-
   const created = await createRecord('질문', {
     '질문 ID': recordId('T-Q'), '이웃 ID': resident.fields['이웃 ID'],
-    '이웃': [resident.id], '질문 내용': question, '질문 시각': new Date().toISOString(),
-    ...(answer ? { '모찌몽 답변': answer, '답변 시각': new Date().toISOString() } : {})
+    '이웃': [resident.id], '질문 내용': question, '질문 시각': new Date().toISOString()
   });
-  return { id: created.fields['질문 ID'], answered: !!answer };
+  return { id: created.fields['질문 ID'] };
 }
 
 async function visitNeighbor(req, body) {
