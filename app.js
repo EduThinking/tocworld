@@ -220,7 +220,13 @@ function renderHome(home) {
     card.append(answer); questions.append(card);
   });
   if (!home.guestbook?.length) {
-    guestbookPanel.append(make('div', 'home-empty', '아직 방명록이 없어요. 이웃들이 찾아오면 여기에 인사가 남아요.'));
+    const emptyGuestbook = make('div', 'home-empty');
+    emptyGuestbook.append(make('p', '', '아직 방명록이 없어요. 이웃들이 찾아오면 여기에 인사가 남아요.'));
+    const visitBtn = make('button', 'button primary', '이웃 집 놀러가기');
+    visitBtn.type = 'button';
+    visitBtn.addEventListener('click', () => showPage('houses'));
+    emptyGuestbook.append(visitBtn);
+    guestbookPanel.append(emptyGuestbook);
   }
   home.guestbook?.forEach(entry => {
     const card = make('article', 'guestbook-entry');
