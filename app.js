@@ -144,9 +144,23 @@ function renderHome(home) {
   $('#ask-button').hidden = false;
   if (!home) { target.append(make('div', 'home-empty', '내 집 정보를 불러오지 못했어요. 잠시 후 다시 열어 주세요.')); return; }
   const summary = make('div', 'home-summary studio-summary');
-  summary.append(make('div', 'avatar', home.resident.avatar));
+  const avatarWrap = make('div', 'avatar-wrap');
+  avatarWrap.append(make('div', 'avatar', home.resident.avatar));
+  if (home.treeStage) {
+    const tree = make('div', 'tree-stage', home.treeStage.emoji);
+    tree.title = `생각나무: ${home.treeStage.name}`;
+    avatarWrap.append(tree);
+  }
+  summary.append(avatarWrap);
   const title = make('div', 'studio-title');
-  title.append(make('h3', '', `${home.resident.nickname} 님의 미니홈피`), make('p', '', '생각하다 쉬어가도 괜찮아요'), make('small', '', home.resident.houseId));
+  const nameRow = make('div', 'name-row');
+  nameRow.append(make('h3', '', `${home.resident.nickname} 님의 미니홈피`));
+  if (home.badge) {
+    const badge = make('span', 'badge', `${home.badge.emoji} ${home.badge.name}`);
+    badge.title = `풀이 뱃지: ${home.badge.name}`;
+    nameRow.append(badge);
+  }
+  title.append(nameRow, make('p', '', '생각하다 쉬어가도 괜찮아요'), make('small', '', home.resident.houseId));
   summary.append(title);
   const waiting = home.questions.filter(q => !q.answer).length;
   const answered = home.questions.filter(q => q.answer).length;
@@ -165,13 +179,20 @@ function renderHome(home) {
   const tabs = make('div', 'studio-tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', '내 기록');
   const records = make('div', 'solution-list'); records.id = 'studio-solutions'; records.setAttribute('role', 'tabpanel'); records.tabIndex = 0;
   const questions = make('div', 'solution-list'); questions.id = 'studio-questions'; questions.setAttribute('role', 'tabpanel'); questions.tabIndex = 0;
-  const panels = [records, questions];
-  const buttons = ['내가 푼 문제', `모찌몽과의 문답 · ${home.questions.length}`].map((label, index) => {
+  const guestbookPanel = make('div', 'solution-list guestbook-panel'); guestbookPanel.id = 'studio-guestbook'; guestbookPanel.setAttribute('role', 'tabpanel'); guestbookPanel.tabIndex = 0;
+  const panels = [records, questions, guestbookPanel];
+  const guestbookCount = home.guestbook?.length || 0;
+  const tabLabels = ['내가 푼 문제', `모찌몽과의 문답 · ${home.questions.length}`, `방명록 · ${guestbookCount}`];
+  const buttons = tabLabels.map((label, index) => {
     const button = make('button', '', label); button.type = 'button'; button.id = `studio-tab-${index}`;
     button.setAttribute('role', 'tab'); button.setAttribute('aria-controls', panels[index].id); panels[index].setAttribute('aria-labelledby', button.id);
     button.addEventListener('click', () => selectTab(index));
     button.addEventListener('keydown', event => {
-      const next = event.key === 'ArrowRight' || event.key === 'ArrowLeft' ? 1 - index : event.key === 'Home' ? 0 : event.key === 'End' ? 1 : null;
+      let next = null;
+      if (event.key === 'ArrowRight') next = (index + 1) % panels.length;
+      else if (event.key === 'ArrowLeft') next = (index - 1 + panels.length) % panels.length;
+      else if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = panels.length - 1;
       if (next !== null) { event.preventDefault(); selectTab(next); buttons[next].focus(); }
     });
     tabs.append(button); return button;
@@ -198,7 +219,18 @@ function renderHome(home) {
     const answer = make('div', 'feedback'); answer.append(make('b', '', '모찌몽의 답변'), make('p', '', item.answer || '질문을 읽고 답을 준비하고 있어요.'));
     card.append(answer); questions.append(card);
   });
-  notebook.append(tabs, records, questions); target.append(notebook);
+  if (!home.guestbook?.length) {
+    guestbookPanel.append(make('div', 'home-empty', '아직 방명록이 없어요. 이웃들이 찾아오면 여기에 인사가 남아요.'));
+  }
+  home.guestbook?.forEach(entry => {
+    const card = make('article', 'guestbook-entry');
+    const header = make('div', 'guestbook-header');
+    header.append(make('span', 'guestbook-avatar', entry.avatar), make('span', 'guestbook-visitor', entry.visitor));
+    if (entry.createdAt) header.append(make('small', 'guestbook-date', new Date(entry.createdAt).toLocaleDateString('ko-KR')));
+    card.append(header, make('p', 'guestbook-message', entry.message));
+    guestbookPanel.append(card);
+  });
+  notebook.append(tabs, records, questions, guestbookPanel); target.append(notebook);
 }
 
 async function load() {
@@ -319,17 +351,93 @@ function showPage(id) {
 }
 document.querySelectorAll('[data-page]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.page)));
 $('.brand').addEventListener('click', event => { event.preventDefault(); showPage('houses'); });
-function visitHouse(house) {
+async function visitHouse(house) {
   if (ownResident?.houseId === house.id) { showPage('my-home'); return; }
   const target = $('#neighbor-content'); target.replaceChildren();
-  const room = make('div', 'mini-room');
-  room.append(make('span', 'room-window', '☀️'), make('span', 'room-avatar', house.resident?.avatar || '🏡'), make('span', 'room-plant', '🪴'), make('span', 'room-books', '📚'));
-  target.append(make('h1', '', house.resident ? `${house.resident.nickname} 님의 미니홈피` : `${house.id} · 나의 집이 될 공간`), room);
-  target.append(make('p', 'notice', house.resident ? '이웃의 집에 오신 걸 환영해요. 풀이와 질문, 피드백은 집주인만 볼 수 있어요.' : '별명과 아바타를 정하면 이곳에 나의 풀이와 생각나무가 쌓여요.'));
-  if (!house.resident && !ownResident) {
-    const choose = make('button', 'button primary', '이 집에 입주하기'); choose.addEventListener('click', () => openApply(house.id)); target.append(choose);
-  } else if (!house.resident) target.append(make('p', '', '이미 내 집이 있어요. 집 이동은 아직 지원하지 않아요.'));
+
+  if (!house.resident) {
+    const room = make('div', 'mini-room');
+    room.append(make('span', 'room-window', '☀️'), make('span', 'room-avatar', '🏡'), make('span', 'room-plant', '🪴'), make('span', 'room-books', '📚'));
+    target.append(make('h1', '', `${house.id} · 나의 집이 될 공간`), room);
+    target.append(make('p', 'notice', '별명과 아바타를 정하면 이곳에 나의 풀이와 생각나무가 쌓여요.'));
+    if (!ownResident) {
+      const choose = make('button', 'button primary', '이 집에 입주하기'); choose.addEventListener('click', () => openApply(house.id)); target.append(choose);
+    } else target.append(make('p', '', '이미 내 집이 있어요. 집 이동은 아직 지원하지 않아요.'));
+    showPage('neighbor-home');
+    return;
+  }
+
+  target.append(make('p', 'notice', '이웃 정보를 불러오는 중...'));
   showPage('neighbor-home');
+
+  try {
+    const data = await api('visit', 'POST', { houseId: house.id }, true);
+    target.replaceChildren();
+
+    const summary = make('div', 'home-summary studio-summary neighbor-summary');
+    const avatarWrap = make('div', 'avatar-wrap');
+    avatarWrap.append(make('div', 'avatar', data.resident.avatar));
+    if (data.treeStage) {
+      const tree = make('div', 'tree-stage', data.treeStage.emoji);
+      tree.title = `생각나무: ${data.treeStage.name}`;
+      avatarWrap.append(tree);
+    }
+    summary.append(avatarWrap);
+    const title = make('div', 'studio-title');
+    const nameRow = make('div', 'name-row');
+    nameRow.append(make('h3', '', `${data.resident.nickname} 님의 미니홈피`));
+    if (data.badge) {
+      const badge = make('span', 'badge', `${data.badge.emoji} ${data.badge.name}`);
+      badge.title = `풀이 뱃지: ${data.badge.name}`;
+      nameRow.append(badge);
+    }
+    title.append(nameRow, make('p', '', '이웃의 집에 오신 걸 환영해요'), make('small', '', data.resident.houseId));
+    summary.append(title);
+    target.append(summary);
+
+    const room = make('div', 'studio-room');
+    room.setAttribute('role', 'img'); room.setAttribute('aria-label', '이웃의 작업실');
+    target.append(room);
+
+    const guestbookSection = make('div', 'guestbook-section');
+    guestbookSection.append(make('h4', '', `📝 방명록 · ${data.guestbook?.length || 0}`));
+
+    if (ownResident) {
+      const form = make('form', 'guestbook-form');
+      const input = make('input'); input.type = 'text'; input.placeholder = '방명록을 남겨보세요 (2~200자)'; input.maxLength = 200; input.required = true;
+      const submit = make('button', 'button primary', '남기기'); submit.type = 'submit';
+      form.append(input, submit);
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        submit.disabled = true;
+        try {
+          await api('guestbook', 'POST', { houseId: house.id, message: input.value.trim() }, true);
+          input.value = '';
+          visitHouse(house);
+        } catch (err) { alert(err.message); }
+        finally { submit.disabled = false; }
+      });
+      guestbookSection.append(form);
+    }
+
+    const guestbookList = make('div', 'guestbook-list');
+    if (!data.guestbook?.length) {
+      guestbookList.append(make('p', 'notice', '아직 방명록이 없어요. 첫 번째 인사를 남겨보세요!'));
+    }
+    data.guestbook?.forEach(entry => {
+      const card = make('article', 'guestbook-entry');
+      const header = make('div', 'guestbook-header');
+      header.append(make('span', 'guestbook-avatar', entry.avatar), make('span', 'guestbook-visitor', entry.visitor));
+      if (entry.createdAt) header.append(make('small', 'guestbook-date', new Date(entry.createdAt).toLocaleDateString('ko-KR')));
+      card.append(header, make('p', 'guestbook-message', entry.message));
+      guestbookList.append(card);
+    });
+    guestbookSection.append(guestbookList);
+    target.append(guestbookSection);
+  } catch (err) {
+    target.replaceChildren();
+    target.append(make('p', 'notice', `이웃 정보를 불러오지 못했어요: ${err.message}`));
+  }
 }
 $('#gate-form').addEventListener('submit', async event => {
   event.preventDefault(); const button = event.currentTarget.querySelector('button'); button.disabled = true; $('#gate-error').textContent = '';

@@ -5,6 +5,30 @@ const AVATARS = ['🌱', '🐿️', '🦊', '🐻', '🐰', '🦉'];
 const MAX_BODY = 12_000;
 const MAX_CHAT_BODY = 3_500_000;
 
+const BADGES = [
+  { min: 0, emoji: '🌱', name: '새싹' },
+  { min: 1, emoji: '🌿', name: '풀잎' },
+  { min: 3, emoji: '🌳', name: '나무' },
+  { min: 5, emoji: '🌲', name: '숲' },
+  { min: 10, emoji: '⭐', name: '별' },
+];
+
+const TREE_STAGES = [
+  { min: 0, emoji: '🌱', name: '씨앗' },
+  { min: 1, emoji: '🌿', name: '새싹' },
+  { min: 3, emoji: '🌳', name: '어린 나무' },
+  { min: 6, emoji: '🌲', name: '큰 나무' },
+  { min: 11, emoji: '🌳✨', name: '빛나는 나무' },
+];
+
+function getBadge(solutionCount) {
+  return [...BADGES].reverse().find(b => solutionCount >= b.min) || BADGES[0];
+}
+
+function getTreeStage(treeCount) {
+  return [...TREE_STAGES].reverse().find(t => treeCount >= t.min) || TREE_STAGES[0];
+}
+
 const TOCFE_SYSTEM = `너는 TOCfE(Theory of Constraints for Education) 생각도구 전문 튜터 '모찌몽'이야. TOC월드에서 이웃들과 함께 TOCfE를 배우고 실천해.
 
 ## TOCfE 기본 생각도구 3가지
@@ -275,13 +299,21 @@ async function apply(body) {
 
 async function home(req) {
   const resident = await residentFor(req);
-  const [solutions, questions] = await Promise.all([
+  const [solutions, questions, guestbook] = await Promise.all([
     allRecords('풀이', `{이웃 ID}=${formulaValue(resident.fields['이웃 ID'])}`),
-    allRecords('질문', `{이웃 ID}=${formulaValue(resident.fields['이웃 ID'])}`)
+    allRecords('질문', `{이웃 ID}=${formulaValue(resident.fields['이웃 ID'])}`),
+    allRecords('방명록', `{집주인 ID}=${formulaValue(resident.fields['이웃 ID'])}`).catch(() => [])
   ]);
+  const treeCount = solutions.reduce((sum, r) => sum + (Number(r.fields['생각나무']) || 0), 0);
   return {
     resident: publicResident(resident),
-    treeCount: solutions.reduce((sum, r) => sum + (Number(r.fields['생각나무']) || 0), 0),
+    treeCount,
+    badge: getBadge(solutions.length),
+    treeStage: getTreeStage(treeCount),
+    guestbook: guestbook.map(r => ({
+      id: r.id, visitor: r.fields['방문자 별명'], avatar: r.fields['방문자 아바타'],
+      message: r.fields['메시지'], createdAt: r.fields['작성 시각']
+    })).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 20),
     questions: questions.map(r => ({
       id: r.fields['질문 ID'], question: r.fields['질문 내용'], answer: r.fields['모찌몽 답변'] || null,
       askedAt: r.fields['질문 시각']
@@ -303,6 +335,51 @@ async function ask(req, body) {
     '이웃': [resident.id], '질문 내용': question, '질문 시각': new Date().toISOString()
   });
   return { id: created.fields['질문 ID'] };
+}
+
+async function visitNeighbor(req, body) {
+  const houseId = String(body.houseId || '').trim();
+  if (!houseId) fail('집 ID가 필요해요.');
+  const residents = await allRecords('이웃', `{집 ID}=${formulaValue(houseId)}`);
+  if (!residents.length) fail('이 집에는 아직 이웃이 없어요.', 404);
+  const host = residents[0];
+  const [solutions, guestbook] = await Promise.all([
+    allRecords('풀이', `{이웃 ID}=${formulaValue(host.fields['이웃 ID'])}`),
+    allRecords('방명록', `{집주인 ID}=${formulaValue(host.fields['이웃 ID'])}`).catch(() => [])
+  ]);
+  const treeCount = solutions.reduce((sum, r) => sum + (Number(r.fields['생각나무']) || 0), 0);
+  return {
+    resident: publicResident(host),
+    badge: getBadge(solutions.length),
+    treeStage: getTreeStage(treeCount),
+    guestbook: guestbook.map(r => ({
+      id: r.id, visitor: r.fields['방문자 별명'], avatar: r.fields['방문자 아바타'],
+      message: r.fields['메시지'], createdAt: r.fields['작성 시각']
+    })).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 20)
+  };
+}
+
+async function writeGuestbook(req, body) {
+  const visitor = await residentFor(req);
+  const hostHouseId = String(body.houseId || '').trim();
+  const message = String(body.message || '').trim();
+  if (!hostHouseId) fail('집 ID가 필요해요.');
+  if (message.length < 2 || message.length > 200) fail('방명록은 2~200자로 적어 주세요.');
+  const hosts = await allRecords('이웃', `{집 ID}=${formulaValue(hostHouseId)}`);
+  if (!hosts.length) fail('이 집에는 아직 이웃이 없어요.', 404);
+  const host = hosts[0];
+  if (host.fields['이웃 ID'] === visitor.fields['이웃 ID']) fail('내 집에는 방명록을 남길 수 없어요.');
+  const created = await createRecord('방명록', {
+    '집주인 ID': host.fields['이웃 ID'],
+    '집주인': [host.id],
+    '방문자 ID': visitor.fields['이웃 ID'],
+    '방문자': [visitor.id],
+    '방문자 별명': visitor.fields['별명'],
+    '방문자 아바타': visitor.fields['아바타'],
+    '메시지': message,
+    '작성 시각': new Date().toISOString()
+  });
+  return { ok: true, id: created.id };
 }
 
 async function submit(req, body) {
@@ -382,6 +459,8 @@ export default async function handler(req, res) {
     if (op === 'apply') return send(res, 201, await apply(body));
     if (op === 'submit') return send(res, 201, await submit(req, body));
     if (op === 'ask') return send(res, 201, await ask(req, body));
+    if (op === 'visit') return send(res, 200, await visitNeighbor(req, body));
+    if (op === 'guestbook') return send(res, 201, await writeGuestbook(req, body));
     if (op === 'feedback') return send(res, 200, await feedback(req, body));
     if (op === 'reply') return send(res, 200, await reply(req, body));
     if (op === 'pending') return send(res, 200, await pending(req));
