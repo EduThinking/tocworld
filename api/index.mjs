@@ -521,6 +521,112 @@ async function cafeWrite(req, body) {
   return { ok: true, id: created.fields['글 ID'] };
 }
 
+const GALLERY_TOOLS = ['구름', '가지', '목표나무', '기타'];
+
+async function galleryList() {
+  const artworks = await allRecords('갤러리', `{공개}=TRUE()`);
+  const residents = await allRecords('이웃');
+  const residentMap = Object.fromEntries(residents.map(r => [r.id, r]));
+  return {
+    artworks: artworks.map(r => {
+      const authorRecord = r.fields['작성자 ID']?.[0] ? residentMap[r.fields['작성자 ID'][0]] : null;
+      return {
+        id: r.fields['작품 ID'],
+        recordId: r.id,
+        title: r.fields['제목'],
+        desc: r.fields['설명'],
+        tool: r.fields['생각도구'],
+        image: r.fields['이미지']?.[0]?.url || null,
+        thumbnail: r.fields['이미지']?.[0]?.thumbnails?.large?.url || r.fields['이미지']?.[0]?.url || null,
+        authorId: authorRecord?.fields['이웃 ID'],
+        author: authorRecord?.fields['별명'] || '익명',
+        avatar: authorRecord?.fields['아바타'] || '🌱',
+        createdAt: r.fields['작성 시각']
+      };
+    }).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+  };
+}
+
+async function galleryUpload(req, body) {
+  const resident = await residentFor(req);
+  const title = String(body.title || '').trim();
+  const desc = String(body.desc || '').trim();
+  const tool = String(body.tool || '').trim();
+  const imageData = body.imageData;
+  const imageMediaType = body.imageMediaType;
+
+  if (title.length < 2 || title.length > 50) fail('제목은 2~50자로 적어 주세요.');
+  if (desc.length > 500) fail('설명은 500자 이내로 적어 주세요.');
+  if (!GALLERY_TOOLS.includes(tool)) fail('생각도구 종류를 선택해 주세요.');
+  if (!imageData || !imageMediaType) fail('이미지를 업로드해 주세요.');
+  if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(imageMediaType)) fail('PNG, JPG, GIF, WEBP 이미지만 올릴 수 있어요.');
+  if (imageData.length > 3_000_000) fail('이미지가 너무 커요. 3MB 이하로 올려주세요.');
+
+  const dataUrl = `data:${imageMediaType};base64,${imageData}`;
+  const created = await createRecord('갤러리', {
+    '작성자 ID': [resident.id],
+    '제목': title,
+    '설명': desc,
+    '생각도구': tool,
+    '이미지': [{ url: dataUrl }],
+    '공개': true,
+    '작성 시각': new Date().toISOString()
+  });
+  return { ok: true, id: created.fields['작품 ID'] };
+}
+
+async function galleryDetail(req, body) {
+  const artworkId = String(body.artworkId || '').trim();
+  if (!artworkId) fail('작품 ID가 필요해요.');
+  const artworks = await allRecords('갤러리', `{작품 ID}=${formulaValue(artworkId)}`);
+  if (!artworks.length) fail('작품을 찾을 수 없어요.', 404);
+  const artwork = artworks[0];
+  const residents = await allRecords('이웃');
+  const residentMap = Object.fromEntries(residents.map(r => [r.id, r]));
+  const authorRecord = artwork.fields['작성자 ID']?.[0] ? residentMap[artwork.fields['작성자 ID'][0]] : null;
+
+  const comments = await allRecords('댓글', `{작품 ID}="${artwork.id}"`);
+  return {
+    artwork: {
+      id: artwork.fields['작품 ID'],
+      recordId: artwork.id,
+      title: artwork.fields['제목'],
+      desc: artwork.fields['설명'],
+      tool: artwork.fields['생각도구'],
+      image: artwork.fields['이미지']?.[0]?.url || null,
+      authorId: authorRecord?.fields['이웃 ID'],
+      author: authorRecord?.fields['별명'] || '익명',
+      avatar: authorRecord?.fields['아바타'] || '🌱',
+      createdAt: artwork.fields['작성 시각']
+    },
+    comments: comments.map(c => {
+      const commenter = c.fields['작성자 ID']?.[0] ? residentMap[c.fields['작성자 ID'][0]] : null;
+      return {
+        id: c.fields['댓글 ID'],
+        content: c.fields['내용'],
+        author: commenter?.fields['별명'] || '익명',
+        avatar: commenter?.fields['아바타'] || '🌱',
+        createdAt: c.fields['작성 시각']
+      };
+    }).sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+  };
+}
+
+async function galleryComment(req, body) {
+  const resident = await residentFor(req);
+  const artworkRecordId = String(body.artworkRecordId || '').trim();
+  const content = String(body.content || '').trim();
+  if (!artworkRecordId) fail('작품 ID가 필요해요.');
+  if (content.length < 2 || content.length > 300) fail('댓글은 2~300자로 적어 주세요.');
+  const created = await createRecord('댓글', {
+    '작품 ID': [artworkRecordId],
+    '작성자 ID': [resident.id],
+    '내용': content,
+    '작성 시각': new Date().toISOString()
+  });
+  return { ok: true, id: created.fields['댓글 ID'] };
+}
+
 export default async function handler(req, res) {
   try {
     const op = new URL(req.url, 'http://localhost').searchParams.get('op');
@@ -532,6 +638,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET' && op === 'home') return send(res, 200, await home(req));
     if (req.method !== 'POST') return send(res, 404, { error: '찾을 수 없습니다.' });
     if (op === 'chat') return send(res, 200, await chat(req, await bodyOfLarge(req)));
+    if (op === 'gallery-upload') return send(res, 201, await galleryUpload(req, await bodyOfLarge(req)));
     const body = await bodyOf(req);
     if (op === 'enter') {
       const applicant = await applicantByPhone(String(body.phone || '').trim());
@@ -549,6 +656,9 @@ export default async function handler(req, res) {
     if (op === 'cafe') return send(res, 200, await cafeList());
     if (op === 'cafe-write') return send(res, 201, await cafeWrite(req, body));
     if (op === 'update-profile') return send(res, 200, await updateProfile(req, body));
+    if (op === 'gallery') return send(res, 200, await galleryList());
+    if (op === 'gallery-detail') return send(res, 200, await galleryDetail(req, body));
+    if (op === 'gallery-comment') return send(res, 201, await galleryComment(req, body));
     return send(res, 404, { error: '찾을 수 없습니다.' });
   } catch (error) {
     if (!error.status) console.error(error);

@@ -374,7 +374,7 @@ function showPage(id) {
     if (button.dataset.page === id) button.setAttribute('aria-current', 'page');
     else button.removeAttribute('aria-current');
   });
-  const titles = { houses: '마을 전체 지도', 'my-home': '내 미니홈피', plaza: '생각 광장', cafe: '마을 카페', library: '마을 도서관', guide: '마을 이용 안내', 'neighbor-home': '이웃 미니홈피', learn: 'TOCfE 배우기' };
+  const titles = { houses: '마을 전체 지도', 'my-home': '내 미니홈피', plaza: '생각 광장', cafe: '마을 카페', gallery: '생각도구 갤러리', library: '마을 도서관', guide: '마을 이용 안내', 'neighbor-home': '이웃 미니홈피', learn: 'TOCfE 배우기' };
   if (id === 'learn' && !$('#chat-messages').childElementCount) renderBubble('assistant', 'TOCfE 생각도구에 대해 궁금한 것을 물어보세요! 질문하기·작성 도움·피드백 받기 모드를 선택해서 시작해요. 🌱');
   $('#page-label').textContent = titles[id] || 'TOC월드';
   window.scrollTo({ top: 0 });
@@ -760,4 +760,163 @@ const origShowPage = showPage;
 showPage = function(id) {
   origShowPage(id);
   if (id === 'cafe' && !cafePosts.length) loadCafe();
+  if (id === 'gallery' && !galleryArtworks.length) loadGallery();
 };
+
+// === 생각도구 갤러리 ===
+let galleryArtworks = [];
+
+async function loadGallery() {
+  try {
+    const result = await api('gallery', 'POST', {});
+    galleryArtworks = result.artworks || [];
+    renderGallery();
+  } catch (error) {
+    $('#gallery-grid').innerHTML = `<p class="notice">갤러리를 불러오지 못했어요: ${error.message}</p>`;
+  }
+}
+
+function renderGallery() {
+  const container = $('#gallery-grid');
+  if (!container) return;
+  container.replaceChildren();
+  if (!galleryArtworks.length) {
+    const empty = make('div', 'home-empty');
+    empty.append(make('p', '', '아직 공유된 작품이 없어요. 첫 번째로 생각도구를 공유해 보세요! 🎨'));
+    container.append(empty);
+    return;
+  }
+  galleryArtworks.forEach(artwork => {
+    const card = make('article', 'gallery-card');
+    card.addEventListener('click', () => openGalleryDetail(artwork.id));
+    const imgWrap = make('div', 'gallery-thumbnail');
+    if (artwork.thumbnail) {
+      const img = make('img', '', '');
+      img.src = artwork.thumbnail;
+      img.alt = artwork.title;
+      imgWrap.append(img);
+    } else {
+      imgWrap.textContent = '🖼️';
+    }
+    card.append(imgWrap);
+    const toolEmoji = { '구름': '☁️', '가지': '🌿', '목표나무': '🌳', '기타': '📝' };
+    card.append(make('span', 'gallery-tool-tag', `${toolEmoji[artwork.tool] || ''} ${artwork.tool}`));
+    card.append(make('h3', 'gallery-title', artwork.title));
+    const footer = make('div', 'gallery-card-footer');
+    footer.append(make('span', 'gallery-author', `${artwork.avatar || '🌱'} ${artwork.author}`));
+    if (artwork.createdAt) footer.append(make('small', 'gallery-date', new Date(artwork.createdAt).toLocaleDateString('ko-KR')));
+    card.append(footer);
+    container.append(card);
+  });
+}
+
+async function openGalleryDetail(artworkId) {
+  try {
+    const result = await api('gallery-detail', 'POST', { artworkId: String(artworkId) });
+    const artwork = result.artwork;
+    const comments = result.comments || [];
+    const content = $('#gallery-detail-content');
+    content.replaceChildren();
+    if (artwork.image) {
+      const img = make('img', 'gallery-detail-img', '');
+      img.src = artwork.image;
+      img.alt = artwork.title;
+      content.append(img);
+    }
+    const toolEmoji = { '구름': '☁️', '가지': '🌿', '목표나무': '🌳', '기타': '📝' };
+    content.append(make('span', 'gallery-tool-tag', `${toolEmoji[artwork.tool] || ''} ${artwork.tool}`));
+    content.append(make('h2', '', artwork.title));
+    const meta = make('div', 'gallery-detail-meta');
+    meta.append(make('span', '', `${artwork.avatar || '🌱'} ${artwork.author}`));
+    if (artwork.createdAt) meta.append(make('small', '', new Date(artwork.createdAt).toLocaleDateString('ko-KR')));
+    content.append(meta);
+    if (artwork.desc) content.append(make('p', 'gallery-desc', artwork.desc));
+    $('#gallery-comment-artwork-id').value = artwork.recordId;
+    const commentsContainer = $('#gallery-comments');
+    commentsContainer.replaceChildren();
+    if (!comments.length) {
+      commentsContainer.append(make('p', 'notice', '아직 댓글이 없어요. 첫 응원을 남겨주세요! 💬'));
+    } else {
+      comments.forEach(c => {
+        const entry = make('div', 'gallery-comment');
+        const header = make('div', 'comment-header');
+        header.append(make('span', '', `${c.avatar || '🌱'} ${c.author}`));
+        if (c.createdAt) header.append(make('small', '', new Date(c.createdAt).toLocaleDateString('ko-KR')));
+        entry.append(header);
+        entry.append(make('p', '', c.content));
+        commentsContainer.append(entry);
+      });
+    }
+    $('#gallery-detail-dialog').showModal();
+  } catch (error) { alert(error.message); }
+}
+
+$('#close-gallery-detail')?.addEventListener('click', () => $('#gallery-detail-dialog').close());
+
+$('#gallery-upload-btn')?.addEventListener('click', () => {
+  if (!ownResident) { alert('먼저 입주해 주세요!'); showPage('houses'); return; }
+  $('#gallery-upload-error').textContent = '';
+  $('#gallery-title').value = '';
+  $('#gallery-tool').value = '';
+  $('#gallery-desc').value = '';
+  $('#gallery-image').value = '';
+  galleryImageData = null;
+  $('#gallery-image-preview').hidden = true;
+  $('#gallery-upload-dialog').showModal();
+});
+
+let galleryImageData = null;
+$('#gallery-image')?.addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) { $('#gallery-upload-error').textContent = '이미지가 너무 커요. 3MB 이하로 올려주세요.'; event.target.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    galleryImageData = { data: e.target.result.split(',')[1], mediaType: file.type || 'image/png' };
+    $('#gallery-preview-img').src = e.target.result;
+    $('#gallery-image-preview').hidden = false;
+  };
+  reader.readAsDataURL(file);
+});
+
+$('#gallery-image-remove')?.addEventListener('click', () => {
+  galleryImageData = null;
+  $('#gallery-image').value = '';
+  $('#gallery-image-preview').hidden = true;
+});
+
+$('#gallery-upload-form')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!galleryImageData) { $('#gallery-upload-error').textContent = '이미지를 업로드해 주세요.'; return; }
+  const button = e.currentTarget.querySelector('[type=submit]'); button.disabled = true;
+  $('#gallery-upload-error').textContent = '';
+  try {
+    await api('gallery-upload', 'POST', {
+      title: $('#gallery-title').value.trim(),
+      tool: $('#gallery-tool').value,
+      desc: $('#gallery-desc').value.trim(),
+      imageData: galleryImageData.data,
+      imageMediaType: galleryImageData.mediaType
+    }, true);
+    galleryImageData = null;
+    $('#gallery-upload-dialog').close();
+    await loadGallery();
+  } catch (error) { $('#gallery-upload-error').textContent = error.message; }
+  finally { button.disabled = false; }
+});
+
+$('#gallery-comment-form')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const artworkRecordId = $('#gallery-comment-artwork-id').value;
+  const content = $('#gallery-comment-input').value.trim();
+  if (!content) return;
+  if (!ownResident) { alert('먼저 입주해 주세요!'); return; }
+  const button = e.currentTarget.querySelector('[type=submit]'); button.disabled = true;
+  try {
+    await api('gallery-comment', 'POST', { artworkRecordId, content }, true);
+    $('#gallery-comment-input').value = '';
+    const artworkId = galleryArtworks.find(a => a.recordId === artworkRecordId)?.id;
+    if (artworkId) await openGalleryDetail(artworkId);
+  } catch (error) { alert(error.message); }
+  finally { button.disabled = false; }
+});
