@@ -118,3 +118,20 @@
 /* 헤딩 버튼 그룹 */
 .heading-buttons{display:flex;gap:10px;flex-wrap:wrap}
 @media(max-width:640px){.heading-buttons{flex-direction:column;gap:8px}.heading-buttons .button{font-size:11px;padding:10px 14px}}
+
+/* 풀이 상세보기 */
+.solution.clickable{cursor:pointer;transition:transform .15s,box-shadow .15s}
+.solution.clickable:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.solution-preview{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#6b7865}
+.click-hint{display:block;margin-top:10px;color:#a0a899;font-size:11px}
+.solution-dialog-body{max-height:80dvh;overflow-y:auto}
+.solution-detail-content h4{font-size:14px;font-weight:700;color:#42583d;margin:20px 0 8px}
+.solution-detail-content h4:first-child{margin-top:0}
+.solution-detail-content p{margin:0;color:#526456;font-size:14px;line-height:1.75;white-space:pre-wrap}
+.solution-answer{background:#f4f7ef;border-radius:12px;padding:16px;margin-bottom:8px}
+.solution-meta{color:#a0a899;display:block;margin-bottom:16px}
+
+/* 프로필 업로드 섹션 */
+.profile-upload-section{margin-bottom:16px}
+.profile-upload-section .image-preview{margin-top:10px}
+.profile-upload-section .image-preview img{max-width:120px;max-height:120px;border-radius:50%}

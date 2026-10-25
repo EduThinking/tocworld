@@ -465,9 +465,20 @@ async function pending(req) {
 
 async function updateProfile(req, body) {
   const resident = await residentFor(req);
-  const profileImage = String(body.profileImage || '').trim();
-  if (profileImage && !profileImage.match(/^https?:\/\/.+/i)) fail('올바른 이미지 URL을 입력해 주세요.');
-  if (profileImage.length > 500) fail('URL이 너무 길어요.');
+  let profileImage = String(body.profileImage || '').trim();
+
+  // 파일 업로드인 경우 (base64 data URL)
+  if (body.imageData && body.imageMediaType) {
+    const data = body.imageData;
+    const mediaType = body.imageMediaType;
+    if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(mediaType)) fail('PNG, JPG, GIF, WEBP 이미지만 올릴 수 있어요.');
+    if (data.length > 500_000) fail('이미지가 너무 커요. 500KB 이하로 올려주세요.');
+    profileImage = `data:${mediaType};base64,${data}`;
+  } else if (profileImage && !profileImage.match(/^https?:\/\/.+/i)) {
+    fail('올바른 이미지 URL을 입력해 주세요.');
+  }
+
+  if (profileImage.length > 600_000) fail('이미지가 너무 커요.');
   await updateRecord('이웃', resident.id, { '프로필 이미지': profileImage || null });
   return { ok: true };
 }

@@ -223,11 +223,13 @@ function renderHome(home) {
     const go = make('button', 'button primary', '생각 광장으로'); go.type = 'button'; go.addEventListener('click', () => showPage('plaza')); empty.append(go); records.append(empty);
   }
   home.solutions.forEach(solution => {
-    const card = make('article', 'solution');
+    const card = make('article', 'solution clickable');
     const problem = state.problems.find(p => p.id === solution.problemId);
-    card.append(make('h4', '', `${problem?.title || solution.problemId} · 🌳 ${solution.trees}`), make('p', '', solution.answer));
-    const feedback = make('div', 'feedback'); feedback.append(make('b', '', '모찌몽의 피드백'), make('p', '', solution.feedback || '풀이를 읽고 피드백을 준비하고 있어요.'));
-    card.append(feedback); records.append(card);
+    card.append(make('h4', '', `${problem?.title || solution.problemId} · 🌳 ${solution.trees}`), make('p', 'solution-preview', solution.answer.slice(0, 100) + (solution.answer.length > 100 ? '...' : '')));
+    const hint = make('small', 'click-hint', '클릭하여 전체 보기');
+    card.append(hint);
+    card.addEventListener('click', () => showSolutionDetail(solution, problem));
+    records.append(card);
   });
   if (!home.questions.length) questions.append(make('div', 'home-empty', '생각하다 막힌 부분이 있나요? 아래 질문하기 버튼으로 이야기를 남겨 주세요.'));
   home.questions.forEach(item => {
@@ -303,6 +305,7 @@ $('#apply-form').addEventListener('submit', async event => {
   finally { button.disabled = false; }
 });
 $('#close-book').addEventListener('click', () => { $('#book-dialog').close(); });
+$('#close-solution')?.addEventListener('click', () => { $('#solution-dialog').close(); });
 $('#finish-credential').addEventListener('click', () => {
   $('#credential-dialog').close(); showPage('my-home');
 });
@@ -696,18 +699,62 @@ $('#cafe-form')?.addEventListener('submit', async e => {
   finally { button.disabled = false; }
 });
 
+let profileImageData = null;
+$('#profile-image-file')?.addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 500 * 1024) { $('#profile-error').textContent = '이미지가 너무 커요. 500KB 이하로 올려주세요.'; event.target.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    profileImageData = { data: e.target.result.split(',')[1], mediaType: file.type || 'image/png' };
+    $('#profile-preview-img').src = e.target.result;
+    $('#profile-image-preview').hidden = false;
+    $('#profile-image-input').value = '';
+  };
+  reader.readAsDataURL(file);
+});
+$('#profile-image-remove')?.addEventListener('click', () => {
+  profileImageData = null;
+  $('#profile-image-file').value = '';
+  $('#profile-image-preview').hidden = true;
+});
 $('#profile-form')?.addEventListener('submit', async e => {
   e.preventDefault();
   const button = e.currentTarget.querySelector('[type=submit]'); button.disabled = true;
   $('#profile-error').textContent = '';
   try {
-    await api('update-profile', 'POST', { profileImage: $('#profile-image-input').value.trim() }, true);
+    const payload = {};
+    if (profileImageData) {
+      payload.imageData = profileImageData.data;
+      payload.imageMediaType = profileImageData.mediaType;
+    } else {
+      payload.profileImage = $('#profile-image-input').value.trim();
+    }
+    await api('update-profile', 'POST', payload, true);
+    profileImageData = null;
+    $('#profile-image-file').value = '';
+    $('#profile-image-preview').hidden = true;
     $('#profile-dialog').close();
     await load();
     showPage('my-home');
   } catch (error) { $('#profile-error').textContent = error.message; }
   finally { button.disabled = false; }
 });
+
+function showSolutionDetail(solution, problem) {
+  $('#solution-tool-tag').textContent = problem?.tool || '생각도구';
+  $('#solution-title').textContent = problem?.title || solution.problemId;
+  const content = $('#solution-content');
+  content.replaceChildren();
+  content.append(make('h4', '', '📝 문제 상황'));
+  content.append(make('p', '', problem?.situation || ''));
+  content.append(make('h4', '', '✏️ 나의 풀이'));
+  content.append(make('p', 'solution-answer', solution.answer));
+  content.append(make('small', 'solution-meta', `🌳 생각나무 ${solution.trees}그루 · ${new Date(solution.submittedAt).toLocaleDateString('ko-KR')} 제출`));
+  content.append(make('h4', '', '🍞 모찌몽의 피드백'));
+  content.append(make('p', '', solution.feedback || '풀이를 읽고 피드백을 준비하고 있어요.'));
+  $('#solution-dialog').showModal();
+}
 
 const origShowPage = showPage;
 showPage = function(id) {
