@@ -12,14 +12,12 @@
  <section id="houses" class="page section">
  <div id="village-map-view">
   <div class="section-heading"><div><p class="eyebrow">OUR LITTLE WORLD</p><h1>어느 마을에 살고 싶으세요?</h1><p>마을을 눌러 들어가 보세요. 빈집을 고르면 입주할 수 있어요.</p></div><span class="chip" id="vacancy-count">불러오는 중</span></div>
-  <div class="map-wrap"><img src="/world-map.png" alt="TOC월드 세 마을 전체 지도" class="world-map"><div id="map-houses" hidden></div></div>
-  <div class="community-spaces">
-    <div class="community-path-line"></div>
-    <div class="community-row">
-      <button class="community-spot" data-page="plaza"><span class="community-icon">🌳</span><span class="community-name">생각 광장</span><span class="community-desc">생각도구 연습</span></button>
-      <button class="community-spot" data-page="cafe"><span class="community-icon">☕</span><span class="community-name">마을 카페</span><span class="community-desc">생각 쉬어가기</span></button>
-      <button class="community-spot" data-page="library"><span class="community-icon">📚</span><span class="community-name">마을 도서관</span><span class="community-desc">생각도구 자료</span></button>
-    </div>
+  <div class="map-wrap">
+    <img src="/world-map.png" alt="TOC월드 세 마을 전체 지도" class="world-map">
+    <div id="map-houses" hidden></div>
+    <button class="map-spot spot-plaza" data-page="plaza" aria-label="생각 광장"><span class="spot-label">🌳 생각 광장</span></button>
+    <button class="map-spot spot-cafe" data-page="cafe" aria-label="마을 카페"><span class="spot-label">☕ 마을 카페</span></button>
+    <button class="map-spot spot-library" data-page="library" aria-label="마을 도서관"><span class="spot-label">📚 마을 도서관</span></button>
   </div>
  </div>
  <div id="village-detail" hidden>
@@ -57,5 +55,6 @@
   <dialog id="book-dialog" aria-labelledby="book-title"><div class="dialog-body book-dialog-body"><button type="button" class="close" id="close-book" aria-label="닫기">×</button><p class="eyebrow" id="book-tag"></p><h2 id="book-title"></h2><div id="book-content" class="book-content"></div></div></dialog>
   <dialog id="ask-dialog" aria-labelledby="ask-title"><form id="ask-form" class="dialog-body"><button type="button" class="close" data-close aria-label="닫기">×</button><p class="eyebrow">ASK MOZZIMONG</p><h2 id="ask-title">모찌몽에게 질문하기</h2><p>목표나무를 풀다 막힌 부분을 알려 주세요. 답변은 내 집에만 표시됩니다.</p><label for="question">궁금한 점</label><textarea id="question" rows="6" minlength="10" maxlength="2000" required placeholder="예: 걸림돌을 어떤 말로 써야 할지 모르겠어요."></textarea><p class="form-error" id="ask-error" role="alert"></p><button type="submit" class="button primary full">질문 남기기</button></form></dialog>
   <dialog id="cafe-dialog" aria-labelledby="cafe-title"><form id="cafe-form" class="dialog-body"><button type="button" class="close" data-close aria-label="닫기">×</button><p class="eyebrow">VILLAGE CAFE</p><h2 id="cafe-title">카페에 글 남기기</h2><label for="cafe-category">카테고리</label><select id="cafe-category" required><option value="">선택해 주세요</option><option value="함께 풀어요">🤝 함께 풀어요</option><option value="정보 공유">💡 정보 공유</option><option value="건의·제안">📋 건의·제안</option><option value="자유 수다">💬 자유 수다</option></select><label for="cafe-title-input">제목</label><input id="cafe-title-input" minlength="2" maxlength="50" required placeholder="제목을 입력해 주세요"><label for="cafe-content">내용</label><textarea id="cafe-content" rows="6" minlength="5" maxlength="2000" required placeholder="이웃들과 나누고 싶은 이야기를 적어 주세요."></textarea><p class="form-error" id="cafe-error" role="alert"></p><button type="submit" class="button primary full">글 올리기</button></form></dialog>
+  <dialog id="profile-dialog" aria-labelledby="profile-title"><form id="profile-form" class="dialog-body"><button type="button" class="close" data-close aria-label="닫기">×</button><p class="eyebrow">MY PROFILE</p><h2 id="profile-title">프로필 이미지 설정</h2><p>나만의 캐릭터 이미지 URL을 입력해 주세요. 이미지는 외부 호스팅(예: imgur, imgbb)에 업로드 후 URL을 붙여넣으세요.</p><label for="profile-image-input">이미지 URL</label><input id="profile-image-input" type="url" maxlength="500" placeholder="https://example.com/my-avatar.png"><p class="hint">비워두면 기본 이모지 아바타가 표시됩니다.</p><p class="form-error" id="profile-error" role="alert"></p><button type="submit" class="button primary full">저장하기</button></form></dialog>
 </body>
 </html>

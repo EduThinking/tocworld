@@ -22,8 +22,14 @@
 .map-house{display:none}
 .village-detail-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}.village-detail-header h2{font-size:28px;margin:0}.village-detail-header .eyebrow{margin:0 0 4px}
 .village-scene{position:relative;width:100%;aspect-ratio:4/3;border-radius:22px;overflow:hidden;border:none;box-shadow:0 0 0 8px #fff,0 12px 32px #3e582018;background:no-repeat top center/cover;margin:0 auto 28px;filter:saturate(0.72) brightness(1.04)}.village-scene[data-village="t"]{background-image:url('/t-village-scene.png')}.village-scene[data-village="o"]{background-image:url('/o-village-scene.png')}.village-scene[data-village="c"]{background-image:url('/c-village-scene.png')}
-.community-spaces{margin-top:18px;text-align:center}.community-path-line{width:2px;height:28px;background:linear-gradient(#b8cdb4,#7ea87a);margin:0 auto}.community-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}.community-spot{display:flex;flex-direction:column;align-items:center;gap:5px;background:#fff;border:1.5px solid #d8e6d0;border-radius:18px;padding:18px 20px;cursor:pointer;min-width:110px;transition:transform .2s,box-shadow .2s}.community-spot:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 8px 20px #3a582018}.community-icon{font-size:30px}.community-name{font-size:13px;font-weight:800;color:#315938}.community-desc{font-size:10px;color:#8a9e87}.community-spot:disabled{opacity:.55;cursor:not-allowed}
-@media(max-width:640px){.village-detail-header h2{font-size:22px}.community-row{gap:10px}.community-spot{padding:14px 14px;min-width:90px}.community-name{font-size:11px}}
+/* 지도 위 공동체 공간 클릭 영역 */
+.map-spot{position:absolute;background:rgba(255,255,255,.85);border:2px solid #fff;border-radius:16px;padding:6px 12px;cursor:pointer;z-index:5;transition:transform .2s,box-shadow .2s,background .2s;box-shadow:0 3px 12px rgba(0,0,0,.2)}
+.map-spot:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(0,0,0,.25);background:#fff}
+.spot-label{font-size:12px;font-weight:800;color:#315938;white-space:nowrap}
+.spot-plaza{left:22%;bottom:32%}
+.spot-cafe{left:48%;bottom:28%}
+.spot-library{right:18%;bottom:30%}
+@media(max-width:640px){.map-spot{padding:4px 8px;border-radius:12px}.spot-label{font-size:10px}.spot-plaza{left:15%;bottom:28%}.spot-cafe{left:42%;bottom:24%}.spot-library{right:12%;bottom:26%}}
 .scene-house{position:absolute;transform:translate(-50%,-100%);background:rgba(255,255,255,.92);border:2px solid #fff;border-radius:20px;padding:4px 10px 4px 7px;font-size:11px;font-weight:700;color:#315938;cursor:pointer;display:flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,.2);transition:transform .15s,box-shadow .15s;white-space:nowrap;z-index:4;line-height:1.3}
 .scene-house:hover{transform:translate(-50%,-110%);box-shadow:0 4px 16px rgba(0,0,0,.25)}
 .scene-house::after{content:'';position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:rgba(255,255,255,.92)}
@@ -101,3 +107,10 @@
 #cafe-dialog select{width:100%;border:1px solid #cbd8c7;border-radius:10px;padding:13px;background:#fbfdf9;font-size:14px;margin-bottom:8px}
 #cafe-dialog select:focus{border-color:#418361;box-shadow:0 0 0 3px #a9d3ac66;outline:none}
 @media(max-width:640px){.cafe-categories{gap:6px}.cafe-cat{padding:6px 12px;font-size:11px}.cafe-post{padding:14px 16px;border-radius:14px}.cafe-avatar{font-size:20px}.cafe-author{font-size:12px}.cafe-category-tag{font-size:10px;padding:3px 8px}.cafe-post-title{font-size:14px}.cafe-post-content{font-size:12px}}
+
+/* 프로필 이미지 */
+.avatar-wrap{position:relative}
+.avatar-img{width:90px;height:90px;border-radius:50%;object-fit:cover;background:#e2e5d4;border:4px solid #fff}
+.edit-profile-btn{position:absolute;bottom:-4px;right:-4px;width:28px;height:28px;border-radius:50%;border:2px solid #fff;background:#687c5d;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:background .15s}
+.edit-profile-btn:hover{background:#4a6047}
+@media(max-width:640px){.avatar-img{width:55px;height:55px}.edit-profile-btn{width:22px;height:22px;font-size:10px}}

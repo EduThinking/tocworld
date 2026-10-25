@@ -183,7 +183,7 @@ async function residentFor(req) {
 }
 
 function publicResident(record) {
-  return { nickname: record.fields['별명'], avatar: record.fields['아바타'], houseId: record.fields['집 ID'] };
+  return { nickname: record.fields['별명'], avatar: record.fields['아바타'], houseId: record.fields['집 ID'], profileImage: record.fields['프로필 이미지'] || null };
 }
 
 const FALLBACK_BOOKS = [
@@ -463,6 +463,15 @@ async function pending(req) {
   };
 }
 
+async function updateProfile(req, body) {
+  const resident = await residentFor(req);
+  const profileImage = String(body.profileImage || '').trim();
+  if (profileImage && !profileImage.match(/^https?:\/\/.+/i)) fail('올바른 이미지 URL을 입력해 주세요.');
+  if (profileImage.length > 500) fail('URL이 너무 길어요.');
+  await updateRecord('이웃', resident.id, { '프로필 이미지': profileImage || null });
+  return { ok: true };
+}
+
 const CAFE_CATEGORIES = ['함께 풀어요', '정보 공유', '건의·제안', '자유 수다'];
 
 async function cafeList() {
@@ -528,6 +537,7 @@ export default async function handler(req, res) {
     if (op === 'pending') return send(res, 200, await pending(req));
     if (op === 'cafe') return send(res, 200, await cafeList());
     if (op === 'cafe-write') return send(res, 201, await cafeWrite(req, body));
+    if (op === 'update-profile') return send(res, 200, await updateProfile(req, body));
     return send(res, 404, { error: '찾을 수 없습니다.' });
   } catch (error) {
     if (!error.status) console.error(error);

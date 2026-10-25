@@ -145,12 +145,27 @@ function renderHome(home) {
   if (!home) { target.append(make('div', 'home-empty', '내 집 정보를 불러오지 못했어요. 잠시 후 다시 열어 주세요.')); return; }
   const summary = make('div', 'home-summary studio-summary');
   const avatarWrap = make('div', 'avatar-wrap');
-  avatarWrap.append(make('div', 'avatar', home.resident.avatar));
+  if (home.resident.profileImage) {
+    const profileImg = make('img', 'avatar-img');
+    profileImg.src = home.resident.profileImage;
+    profileImg.alt = `${home.resident.nickname}의 프로필`;
+    avatarWrap.append(profileImg);
+  } else {
+    avatarWrap.append(make('div', 'avatar', home.resident.avatar));
+  }
   if (home.treeStage) {
     const tree = make('div', 'tree-stage', home.treeStage.emoji);
     tree.title = `생각나무: ${home.treeStage.name}`;
     avatarWrap.append(tree);
   }
+  const editProfileBtn = make('button', 'edit-profile-btn', '✏️');
+  editProfileBtn.title = '프로필 이미지 설정';
+  editProfileBtn.addEventListener('click', () => {
+    $('#profile-image-input').value = home.resident.profileImage || '';
+    $('#profile-error').textContent = '';
+    $('#profile-dialog').showModal();
+  });
+  avatarWrap.append(editProfileBtn);
   summary.append(avatarWrap);
   const title = make('div', 'studio-title');
   const nameRow = make('div', 'name-row');
@@ -526,6 +541,9 @@ initVillageNav();
 document.querySelectorAll('.community-spot[data-page]').forEach(btn => {
   btn.addEventListener('click', () => showPage(btn.dataset.page));
 });
+document.querySelectorAll('.map-spot[data-page]').forEach(btn => {
+  btn.addEventListener('click', () => showPage(btn.dataset.page));
+});
 
 (async () => {
   const savedPhone = localStorage.getItem(worldPhoneKey);
@@ -669,6 +687,19 @@ $('#cafe-form')?.addEventListener('submit', async e => {
     $('#cafe-dialog').close();
     await loadCafe();
   } catch (error) { $('#cafe-error').textContent = error.message; }
+  finally { button.disabled = false; }
+});
+
+$('#profile-form')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const button = e.currentTarget.querySelector('[type=submit]'); button.disabled = true;
+  $('#profile-error').textContent = '';
+  try {
+    await api('update-profile', 'POST', { profileImage: $('#profile-image-input').value.trim() }, true);
+    $('#profile-dialog').close();
+    await load();
+    showPage('my-home');
+  } catch (error) { $('#profile-error').textContent = error.message; }
   finally { button.disabled = false; }
 });
 
