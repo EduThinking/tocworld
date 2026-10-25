@@ -114,3 +114,7 @@
 .edit-profile-btn{position:absolute;bottom:-4px;right:-4px;width:28px;height:28px;border-radius:50%;border:2px solid #fff;background:#687c5d;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:background .15s}
 .edit-profile-btn:hover{background:#4a6047}
 @media(max-width:640px){.avatar-img{width:55px;height:55px}.edit-profile-btn{width:22px;height:22px;font-size:10px}}
+
+/* 헤딩 버튼 그룹 */
+.heading-buttons{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:640px){.heading-buttons{flex-direction:column;gap:8px}.heading-buttons .button{font-size:11px;padding:10px 14px}}

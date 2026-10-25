@@ -136,12 +136,14 @@ function renderHome(home) {
   const target = $('#home-content'); target.replaceChildren();
   if (!ownResident && !credential()) {
     $('#ask-button').hidden = true;
+    $('#ask-button-top').hidden = true;
     const empty = make('div', 'home-empty');
     empty.append(make('div', '', '🏡'), make('strong', '', '아직 입주 전이에요.'), make('p', '', '빈집을 골라 아바타와 함께 입주하면 내 집이 열립니다.'));
     target.append(empty); $('#enter-form').hidden = true; return;
   }
   $('#enter-form').hidden = true;
   $('#ask-button').hidden = false;
+  $('#ask-button-top').hidden = false;
   if (!home) { target.append(make('div', 'home-empty', '내 집 정보를 불러오지 못했어요. 잠시 후 다시 열어 주세요.')); return; }
   const summary = make('div', 'home-summary studio-summary');
   const avatarWrap = make('div', 'avatar-wrap');
@@ -316,6 +318,10 @@ $('#enter-form').addEventListener('submit', async event => {
   catch (error) { localStorage.removeItem(credentialKey); $('#enter-error').textContent = error.message; }
 });
 $('#ask-button').addEventListener('click', () => {
+  $('#ask-error').textContent = '';
+  $('#ask-dialog').showModal();
+});
+$('#ask-button-top').addEventListener('click', () => {
   $('#ask-error').textContent = '';
   $('#ask-dialog').showModal();
 });
