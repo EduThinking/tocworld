@@ -463,6 +463,44 @@ async function pending(req) {
   };
 }
 
+const CAFE_CATEGORIES = ['함께 풀어요', '정보 공유', '건의·제안', '자유 수다'];
+
+async function cafeList() {
+  const posts = await allRecords('카페');
+  return {
+    posts: posts.map(r => ({
+      id: r.fields['글 ID'],
+      authorId: r.fields['작성자 ID'],
+      author: r.fields['작성자 별명'],
+      avatar: r.fields['작성자 아바타'],
+      category: r.fields['카테고리'],
+      title: r.fields['제목'],
+      content: r.fields['내용'],
+      createdAt: r.fields['작성 시각']
+    })).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+  };
+}
+
+async function cafeWrite(req, body) {
+  const resident = await residentFor(req);
+  const category = String(body.category || '').trim();
+  const title = String(body.title || '').trim();
+  const content = String(body.content || '').trim();
+  if (!CAFE_CATEGORIES.includes(category)) fail('카테고리를 선택해 주세요.');
+  if (title.length < 2 || title.length > 50) fail('제목은 2~50자로 적어 주세요.');
+  if (content.length < 5 || content.length > 2000) fail('내용은 5~2000자로 적어 주세요.');
+  const created = await createRecord('카페', {
+    '작성자 ID': resident.fields['이웃 ID'],
+    '작성자 별명': resident.fields['별명'],
+    '작성자 아바타': resident.fields['아바타'],
+    '카테고리': category,
+    '제목': title,
+    '내용': content,
+    '작성 시각': new Date().toISOString()
+  });
+  return { ok: true, id: created.fields['글 ID'] };
+}
+
 export default async function handler(req, res) {
   try {
     const op = new URL(req.url, 'http://localhost').searchParams.get('op');
@@ -488,6 +526,8 @@ export default async function handler(req, res) {
     if (op === 'feedback') return send(res, 200, await feedback(req, body));
     if (op === 'reply') return send(res, 200, await reply(req, body));
     if (op === 'pending') return send(res, 200, await pending(req));
+    if (op === 'cafe') return send(res, 200, await cafeList());
+    if (op === 'cafe-write') return send(res, 201, await cafeWrite(req, body));
     return send(res, 404, { error: '찾을 수 없습니다.' });
   } catch (error) {
     if (!error.status) console.error(error);

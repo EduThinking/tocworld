@@ -598,3 +598,82 @@ $('#chat-form')?.addEventListener('submit', async event => {
 $('#chat-input')?.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $('#chat-form')?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); }
 });
+
+// === 마을 카페 ===
+let cafePosts = [];
+let cafeFilter = 'all';
+
+async function loadCafe() {
+  try {
+    const result = await api('cafe', 'POST', {});
+    cafePosts = result.posts || [];
+    renderCafe();
+  } catch (error) {
+    $('#cafe-posts').innerHTML = `<p class="notice">카페 글을 불러오지 못했어요: ${error.message}</p>`;
+  }
+}
+
+function renderCafe() {
+  const container = $('#cafe-posts');
+  if (!container) return;
+  container.replaceChildren();
+  const filtered = cafeFilter === 'all' ? cafePosts : cafePosts.filter(p => p.category === cafeFilter);
+  if (!filtered.length) {
+    const empty = make('div', 'home-empty');
+    empty.append(make('p', '', cafeFilter === 'all' ? '아직 글이 없어요. 첫 번째 글을 남겨보세요!' : '이 카테고리에 글이 없어요.'));
+    container.append(empty);
+    return;
+  }
+  filtered.forEach(post => {
+    const card = make('article', 'cafe-post');
+    const header = make('div', 'cafe-post-header');
+    header.append(make('span', 'cafe-avatar', post.avatar || '🌱'), make('span', 'cafe-author', post.author));
+    const catEmoji = { '함께 풀어요': '🤝', '정보 공유': '💡', '건의·제안': '📋', '자유 수다': '💬' };
+    header.append(make('span', 'cafe-category-tag', `${catEmoji[post.category] || ''} ${post.category}`));
+    if (post.createdAt) header.append(make('small', 'cafe-date', new Date(post.createdAt).toLocaleDateString('ko-KR')));
+    card.append(header);
+    card.append(make('h3', 'cafe-post-title', post.title));
+    card.append(make('p', 'cafe-post-content', post.content));
+    container.append(card);
+  });
+}
+
+document.querySelectorAll('.cafe-cat').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cafe-cat').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    cafeFilter = btn.dataset.cat;
+    renderCafe();
+  });
+});
+
+$('#cafe-write-btn')?.addEventListener('click', () => {
+  if (!ownResident) { alert('먼저 입주해 주세요!'); showPage('houses'); return; }
+  $('#cafe-error').textContent = '';
+  $('#cafe-dialog').showModal();
+});
+
+$('#cafe-form')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const button = e.currentTarget.querySelector('[type=submit]'); button.disabled = true;
+  $('#cafe-error').textContent = '';
+  try {
+    await api('cafe-write', 'POST', {
+      category: $('#cafe-category').value,
+      title: $('#cafe-title-input').value.trim(),
+      content: $('#cafe-content').value.trim()
+    }, true);
+    $('#cafe-category').value = '';
+    $('#cafe-title-input').value = '';
+    $('#cafe-content').value = '';
+    $('#cafe-dialog').close();
+    await loadCafe();
+  } catch (error) { $('#cafe-error').textContent = error.message; }
+  finally { button.disabled = false; }
+});
+
+const origShowPage = showPage;
+showPage = function(id) {
+  origShowPage(id);
+  if (id === 'cafe' && !cafePosts.length) loadCafe();
+};

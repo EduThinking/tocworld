@@ -83,3 +83,21 @@
 .guestbook-panel .guestbook-entry{border-color:#eae3d5}
 .neighbor-summary{margin-bottom:18px}
 @media(max-width:640px){.guestbook-section{padding:14px;border-radius:14px}.guestbook-section h4{font-size:14px}.guestbook-form{flex-direction:column}.guestbook-form .button{width:100%}.guestbook-entry{padding:10px 12px}.guestbook-avatar{font-size:16px}.guestbook-visitor{font-size:12px}.guestbook-message{font-size:12px}}
+
+/* 마을 카페 */
+.cafe-categories{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.cafe-cat{padding:8px 16px;border:1.5px solid #d8e6d0;border-radius:20px;background:#fff;font-size:13px;font-weight:700;color:#8a9e87;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.cafe-cat.active{background:#e8f3e4;color:#315938;border-color:#7ea87a}
+.cafe-cat:hover:not(.active){border-color:#a0c798}
+.cafe-posts{display:flex;flex-direction:column;gap:14px}
+.cafe-post{background:#fff;border:1px solid #e1e6d9;border-radius:18px;padding:20px 24px}
+.cafe-post-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.cafe-avatar{font-size:24px}
+.cafe-author{font-weight:700;color:#42583d;font-size:14px}
+.cafe-category-tag{display:inline-flex;background:#f3edcf;color:#857341;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;margin-left:auto}
+.cafe-date{color:#a0a899;font-size:11px}
+.cafe-post-title{margin:0 0 8px;font-size:17px;color:#315938}
+.cafe-post-content{margin:0;color:#526456;font-size:14px;line-height:1.7;white-space:pre-wrap}
+#cafe-dialog select{width:100%;border:1px solid #cbd8c7;border-radius:10px;padding:13px;background:#fbfdf9;font-size:14px;margin-bottom:8px}
+#cafe-dialog select:focus{border-color:#418361;box-shadow:0 0 0 3px #a9d3ac66;outline:none}
+@media(max-width:640px){.cafe-categories{gap:6px}.cafe-cat{padding:6px 12px;font-size:11px}.cafe-post{padding:14px 16px;border-radius:14px}.cafe-avatar{font-size:20px}.cafe-author{font-size:12px}.cafe-category-tag{font-size:10px;padding:3px 8px}.cafe-post-title{font-size:14px}.cafe-post-content{font-size:12px}}
